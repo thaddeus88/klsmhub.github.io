@@ -117,7 +117,7 @@
                     </div>
 
                     <div class="mt-5 pt-4 border-t border-slate-200 flex flex-col items-center gap-2.5 text-center text-xs text-slate-400">
-                        <span>KLSM Palm Oil Mill Safety Portal &bull; Version 3.0 (Mobile Ready)</span>
+                        <span>2026 KLSM HSSE &bull; Version 3.0 (Mobile Ready)</span>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                             <button type="button" onclick="openFirebaseSetupModal()" class="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 text-xs">
                                 <i class="fa-solid fa-cloud-bolt text-amber-600"></i> Link Firebase Cloud
@@ -305,9 +305,9 @@
 
                         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">UAUC Logged (Month)</p>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">UAUC & Findings</p>
                                 <h3 id="statUaucCount" class="text-2xl font-bold text-indigo-600 mt-1">12 Reports</h3>
-                                <p class="text-xs text-emerald-600 font-medium mt-1">10 Resolved</p>
+                                <p id="statUaucResolved" class="text-xs text-emerald-600 font-medium mt-1">10 Resolved</p>
                             </div>
                             <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 text-xl">
                                 <i class="fa-solid fa-triangle-exclamation"></i>
@@ -318,14 +318,20 @@
                     <!-- Charts Row -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                            <h3 class="text-base font-bold text-slate-900 mb-4">Inspection Findings by Zone</h3>
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-base font-bold text-slate-900">Inspection Compliance by Zone (%)</h3>
+                                <span class="text-xs text-slate-500">Live from Zone Submissions</span>
+                            </div>
                             <div class="h-64">
                                 <canvas id="chartZoneCompliance"></canvas>
                             </div>
                         </div>
 
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                            <h3 class="text-base font-bold text-slate-900 mb-4">UAUC Classification Distribution</h3>
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-base font-bold text-slate-900">UAUC & Non-Conformance Distribution</h3>
+                                <span class="text-xs text-slate-500">Live Breakdown</span>
+                            </div>
                             <div class="h-64 flex justify-center">
                                 <canvas id="chartUaucDistribution"></canvas>
                             </div>
@@ -398,8 +404,8 @@
                                         <th class="p-3">Inspector</th>
                                         <th class="p-3">Compliance Score</th>
                                         <th class="p-3">Remarks</th>
-                                        <th class="p-3 text-center">Photo</th>
-                                        <th class="p-3 text-right">Actions</th>
+                                        <th class="p-3 text-center">Photos</th>
+                                        <th class="p-3 text-right">Details & Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="zoneLogsTableBody" class="divide-y divide-slate-200 bg-white">
@@ -416,14 +422,17 @@
                         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                             <div>
                                 <h2 class="text-xl font-bold text-slate-900">Fire Fighting Equipment Checklist</h2>
-                                <p class="text-sm text-slate-500">Routine safety verification for Extinguishers, Hose Reels, Hydrants & Pumps.</p>
+                                <p class="text-sm text-slate-500">Routine safety verification for Extinguishers, Hose Reels, Hydrants & Fire Pumps.</p>
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 <button onclick="openFireExtinguisherModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
                                     <i class="fa-solid fa-fire-extinguisher"></i> + Add Extinguisher
                                 </button>
-                                <button onclick="openFirePumpModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
+                                <button onclick="openFirePumpModal(null, 'HYDRANT')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
                                     <i class="fa-solid fa-faucet-drip"></i> + Add Hose Reel / Hydrant
+                                </button>
+                                <button onclick="openFirePumpModal(null, 'PUMP')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
+                                    <i class="fa-solid fa-pump-soap"></i> + Add Pump Inspection
                                 </button>
                             </div>
                         </div>
@@ -500,12 +509,9 @@
                                     <thead class="bg-slate-100 text-slate-700 font-semibold">
                                         <tr>
                                             <th class="p-3">Equipment Item</th>
+                                            <th class="p-3">Category</th>
                                             <th class="p-3">Zone / Location</th>
-                                            <th class="p-3">Hose Condition</th>
-                                            <th class="p-3">Coupling</th>
-                                            <th class="p-3">Nozzle</th>
-                                            <th class="p-3">Fire Hydrant Box</th>
-                                            <th class="p-3">Valve</th>
+                                            <th class="p-3">Inspection Criteria Summary</th>
                                             <th class="p-3">Last Test</th>
                                             <th class="p-3 text-center">Status</th>
                                             <th class="p-3 text-right">Actions</th>
@@ -577,12 +583,27 @@
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <div>
-                                <h2 class="text-xl font-bold text-slate-900">Daily Findings & UAUC Reports</h2>
-                                <p class="text-sm text-slate-500">Unsafe Act & Unsafe Condition observations and unsatisfactory findings with photo evidence.</p>
+                                <h2 class="text-xl font-bold text-slate-900">Daily Findings (Non-Conformance) & UAUC Reports</h2>
+                                <p class="text-sm text-slate-500">Unsatisfactory Zone Inspection Findings, Unsafe Acts (UA), and Unsafe Conditions (UC) with photo evidence.</p>
                             </div>
-                            <button onclick="openUaucModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
-                                <i class="fa-solid fa-triangle-exclamation"></i> Log UAUC Report
-                            </button>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="openUaucModal(null, 'Non-Conformance (Unsatisfactory Finding)')" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
+                                    <i class="fa-solid fa-clipboard-question"></i> + Log Non-Conformance Finding
+                                </button>
+                                <button onclick="openUaucModal(null, 'Unsafe Act')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> + Log UAUC Report
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filter Controls for Daily Findings & UAUC -->
+                        <div class="flex flex-wrap gap-3 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <select id="filterUaucCategory" onchange="renderUaucTable()" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm">
+                                <option value="ALL">All Categories (UA, UC & Non-Conformance)</option>
+                                <option value="Non-Conformance (Unsatisfactory Finding)">Non-Conformance / Unsatisfactory Finding</option>
+                                <option value="Unsafe Act">Unsafe Act (UA)</option>
+                                <option value="Unsafe Condition">Unsafe Condition (UC)</option>
+                            </select>
                         </div>
 
                         <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -592,10 +613,10 @@
                                         <th class="p-3">Date</th>
                                         <th class="p-3">Category</th>
                                         <th class="p-3">Zone Location</th>
-                                        <th class="p-3">Observed Condition / Act</th>
-                                        <th class="p-3">Immediate Action Taken</th>
+                                        <th class="p-3">Observed Condition / Non-Conformance</th>
+                                        <th class="p-3">Immediate Action / Remark</th>
                                         <th class="p-3">Reporter</th>
-                                        <th class="p-3 text-center">Photo</th>
+                                        <th class="p-3 text-center">Photos</th>
                                         <th class="p-3 text-center">Risk Level</th>
                                         <th class="p-3 text-center">Status</th>
                                         <th class="p-3 text-right">Actions</th>
@@ -939,28 +960,46 @@
         ];
 
         let firePumps = [
-            { id: "HRP-01", name: "Hose Reel #01", location: "Zone 5 – Production Area", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Good", valve: "Operational", lastTest: "2026-10-10", status: "PASS" },
-            { id: "HRP-02", name: "Yard Hydrant Pillar #04", location: "Zone 6 – Store & Diesel Skid Tank", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Minor Rust", valve: "Operational", lastTest: "2026-10-12", status: "PASS" },
-            { id: "HRP-03", name: "Main Hydrant & Pump #01", location: "Zone 3 – Boiler, Engine Room & RO Water Treatment", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Good", valve: "Operational", lastTest: "2026-10-20", status: "PASS" }
+            { id: "HRP-01", equipCategory: "Hose Reel / Hydrant", name: "Hose Reel #01", location: "Zone 5 – Production Area", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Good", valve: "Operational", lastTest: "2026-10-10", status: "PASS" },
+            { id: "HRP-02", equipCategory: "Hose Reel / Hydrant", name: "Yard Hydrant Pillar #04", location: "Zone 6 – Store & Diesel Skid Tank", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Minor Rust", valve: "Operational", lastTest: "2026-10-12", status: "PASS" },
+            { id: "HRP-03", equipCategory: "Standby Diesel Pump", name: "Standby Diesel Fire Pump #01", location: "Zone 3 – Boiler, Engine Room & RO Water Treatment", batteryCond: "Good (12.8V)", engineOil: "Normal Level", dieselFuel: "95% Full", radiatorCoolant: "Normal Level", controlPanel: "Auto Mode / Normal", inletOutletValve: "Open & Operational", pressureGauge: "8.2 Bar (Functional)", electricMotor: "N/A (Diesel Pump)", cutInOutPressure: "Cut-in 6.5 Bar / Cut-out 8.5 Bar", lastTest: "2026-10-20", status: "PASS" },
+            { id: "HRP-04", equipCategory: "Duty Pump", name: "Main Electric Duty Pump #01", location: "Zone 3 – Boiler, Engine Room & RO Water Treatment", batteryCond: "N/A", engineOil: "N/A", dieselFuel: "N/A", radiatorCoolant: "N/A", controlPanel: "Auto Mode / Normal", inletOutletValve: "Open & Operational", pressureGauge: "8.2 Bar (Functional)", electricMotor: "Good / Normal Amp", cutInOutPressure: "Cut-in 7.0 Bar / Cut-out 8.5 Bar", lastTest: "2026-10-20", status: "PASS" }
         ];
 
         let carParData = [
-            { ref: "CAR-2026-089", type: "CAR", zone: "Zone 3 – Boiler, Engine Room & RO Water Treatment", finding: "Steam leakage at valve flange #3", pic: "Ahmad (Boiler Ops)", target: "2026-10-28", status: "OPEN", photoName: "" },
-            { ref: "PAR-2026-012", type: "PAR", zone: "Zone 2 – Workshop", finding: "Install secondary safety guard for grinding wheel", pic: "Maniam (Fitter)", target: "2026-11-05", status: "IN_PROGRESS", photoName: "" },
-            { ref: "CAR-2026-074", type: "CAR", zone: "Zone 1 – Laboratory, CPO Despatch, Oil Storage Tank & FFB Grading", finding: "Eyewash station pressure low", pic: "Siti (Lab Tech)", target: "2026-10-15", status: "CLOSED", photoName: "" }
+            { ref: "CAR-2026-089", type: "CAR", zone: "Zone 3 – Boiler, Engine Room & RO Water Treatment", finding: "Steam leakage at valve flange #3", pic: "Ahmad (Boiler Ops)", target: "2026-10-28", status: "OPEN", photos: [] },
+            { ref: "PAR-2026-012", type: "PAR", zone: "Zone 2 – Workshop", finding: "Install secondary safety guard for grinding wheel", pic: "Maniam (Fitter)", target: "2026-11-05", status: "IN_PROGRESS", photos: [] },
+            { ref: "CAR-2026-074", type: "CAR", zone: "Zone 1 – Laboratory, CPO Despatch, Oil Storage Tank & FFB Grading", finding: "Eyewash station pressure low", pic: "Siti (Lab Tech)", target: "2026-10-15", status: "CLOSED", photos: [] }
         ];
 
         let uaucData = [
-            { id: "UAUC-101", date: "2026-10-22", category: "Unsafe Act", zone: "Zone 2 – Workshop", observation: "Worker grinding metal without face shield", immediateAction: "Work stopped, PPE provided immediately", reporter: "John Doe", risk: "HIGH", status: "Closed", photoName: "" },
-            { id: "UAUC-102", date: "2026-10-21", category: "Unsafe Condition", zone: "Zone 5 – Production Area", observation: "Oil slick near press station #2", immediateAction: "Sawdust applied and area cordoned off", reporter: "Safety Inspector", risk: "MEDIUM", status: "In Progress", photoName: "" }
+            { id: "UAUC-101", date: "2026-10-22", category: "Unsafe Act", zone: "Zone 2 – Workshop", observation: "Worker grinding metal without face shield", immediateAction: "Work stopped, PPE provided immediately", reporter: "John Doe", risk: "HIGH", status: "Closed", photos: [] },
+            { id: "UAUC-102", date: "2026-10-21", category: "Unsafe Condition", zone: "Zone 5 – Production Area", observation: "Oil slick near press station #2", immediateAction: "Sawdust applied and area cordoned off", reporter: "Safety Inspector", risk: "MEDIUM", status: "In Progress", photos: [] },
+            { id: "UAUC-103", date: "2026-10-24", category: "Non-Conformance (Unsatisfactory Finding)", zone: "Zone 3 – Boiler, Engine Room & RO Water Treatment", observation: "RO Water Chemical Dosing Area: Missing secondary containment tray", immediateAction: "Logged from Zone 3 Inspection for immediate rectification", reporter: "Ahmad Rizwan", risk: "MEDIUM", status: "In Progress", photos: [] }
         ];
 
         let accidentData = [
-            { id: "INC-2026-003", datetime: "2026-10-18 14:30", type: "First Aid Case", zone: "Zone 2 – Workshop", person: "Lee K. (Technician)", cause: "Minor cut on thumb during maintenance", dosh: "Not Required", status: "Closed", photoName: "" }
+            { id: "INC-2026-003", datetime: "2026-10-18 14:30", type: "First Aid Case", zone: "Zone 2 – Workshop", person: "Lee K. (Technician)", cause: "Minor cut on thumb during maintenance", dosh: "Not Required", status: "Closed", photos: [] }
         ];
 
         let zoneInspectionLogs = [
-            { id: "ZLOG-01", date: "2026-10-25", zone: "Zone 1 – Laboratory, CPO Despatch, Oil Storage Tank & FFB Grading", inspector: "John Doe", score: "100%", remarks: "All parameters satisfactory.", photoName: "" }
+            {
+                id: "ZLOG-01",
+                date: "2026-10-25",
+                zoneId: "zone-1",
+                zone: "Zone 1 – Laboratory, CPO Despatch, Oil Storage Tank & FFB Grading",
+                inspector: "John Doe",
+                score: "100%",
+                remarks: "All parameters satisfactory.",
+                photos: [],
+                details: [
+                    { name: "Fume Hood & Ventilation", criteria: "Operating air flow velocity and cleanliness", status: "Satisfactory", remark: "Airflow normal" },
+                    { name: "Chemical Spill Kit & Safety Shower", criteria: "Fully stocked and functional eyewash", status: "Satisfactory", remark: "Checked OK" },
+                    { name: "CPO Despatch Piping & Hose Seals", criteria: "No leaks, valves secured and tagged", status: "Satisfactory", remark: "No leaks" },
+                    { name: "Oil Storage Tank Secondary Containment", criteria: "Bund wall clean, drain valves closed", status: "Satisfactory", remark: "Clean" },
+                    { name: "FFB Ramp Safety Guardrails", criteria: "Structural integrity and safety harnesses", status: "Satisfactory", remark: "Good condition" }
+                ]
+            }
         ];
 
         let personnelData = [
@@ -1014,8 +1053,10 @@
         let pendingDeleteAction = null;
         let deleteAttemptTimestamps = [];
         let botLockoutUntil = 0;
-        let pendingPhotoFile = null;
+        let pendingPhotos = []; // Array of { name, dataUrl } for multi-photo attachments
         let photoPreviewCache = {};
+        let chartZoneInstance = null;
+        let chartUaucInstance = null;
         let db = null;
         let auth = null;
         let currentUserUid = null;
@@ -1028,11 +1069,11 @@
         // so ALL handphones & PCs connect automatically without "UID: local-session"!
         // ============================================================================
         const DEFAULT_KLSM_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyBkaq-9OnrxthkUC1LbVLoFGeDrSbUQAj4", // <-- PASTE YOUR FIREBASE apiKey HERE (starts with AIza...)
+            apiKey: "", // <-- PASTE YOUR FIREBASE apiKey HERE (starts with AIza...)
             authDomain: "klsm-inspection-hub-v2.firebaseapp.com",
             projectId: "klsm-inspection-hub-v2",
             storageBucket: "klsm-inspection-hub-v2.firebasestorage.app",
-            appId: "1:724914634355:web:0ec78b8644860338feb406"
+            appId: ""
         };
 
         // --- CLOUD FIRESTORE INITIALIZATION (MULTI-USER) ---
@@ -1218,6 +1259,7 @@
             renderRecycleBin();
             syncSecurityInputs();
             updateAnalyticsCounters();
+            updateCharts();
         }
 
         // --- ANTI-BOT CAPTCHA, SECURE DELETE & RECOVERY VAULT FUNCTIONS ---
@@ -1463,65 +1505,183 @@
 
             const statUaucCount = document.getElementById('statUaucCount');
             if (statUaucCount) statUaucCount.textContent = `${uaucData.length} Reports`;
+
+            const resolvedUauc = uaucData.filter(u => u.status === 'Closed').length;
+            const statUaucResolved = document.getElementById('statUaucResolved');
+            if (statUaucResolved) statUaucResolved.textContent = `${resolvedUauc} Resolved / Closed`;
+
+            // Overall Zone Compliance Rate based on actual zoneInspectionLogs
+            const statCompliance = document.getElementById('statCompliance');
+            if (statCompliance && zoneInspectionLogs.length > 0) {
+                const numericScores = zoneInspectionLogs
+                    .map(l => parseFloat(String(l.score).replace('%', '')))
+                    .filter(n => !isNaN(n));
+                if (numericScores.length > 0) {
+                    const avg = (numericScores.reduce((a, b) => a + b, 0) / numericScores.length).toFixed(1);
+                    statCompliance.textContent = `${avg}%`;
+                }
+            }
         }
 
-        // --- PHOTO ATTACHMENT HELPER ---
-        function getPhotoInputHtml(existingPhotoName = '') {
+        // --- MULTI-PHOTO ATTACHMENT HELPER (CAMERA + GALLERY + REMOVE OPTION) ---
+        function normalizeRecordPhotos(item) {
+            if (!item) return [];
+            if (Array.isArray(item.photos)) return item.photos;
+            if (item.photoName) {
+                return [{
+                    name: item.photoName,
+                    dataUrl: photoPreviewCache[item.photoName] || `https://placehold.co/600x400/e2e8f0/0f172a?text=${encodeURIComponent(item.photoName)}`
+                }];
+            }
+            return [];
+        }
+
+        function initPendingPhotosFromItem(item) {
+            pendingPhotos = normalizeRecordPhotos(item).map(p => ({ ...p }));
+        }
+
+        function getPhotoInputHtml() {
             return `
-                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                    <label class="block text-xs font-semibold text-slate-700">
-                        <i class="fa-solid fa-camera text-brand-600 mr-1"></i> Photo Attachment (Camera / Gallery)
-                    </label>
-                    <input type="file" accept="image/*" capture="environment" onchange="handlePhotoSelect(event)" class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
-                    ${existingPhotoName ? `<p class="text-[11px] text-emerald-600 font-medium"><i class="fa-solid fa-paperclip mr-1"></i>Current: ${existingPhotoName}</p>` : ''}
-                    <div id="modalPhotoPreviewBox" class="hidden pt-2">
-                        <img id="modalPhotoPreviewImg" src="" alt="Preview" class="h-24 rounded-lg border border-slate-300 object-cover">
+                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <label class="block text-xs font-bold text-slate-700">
+                            <i class="fa-solid fa-images text-brand-600 mr-1"></i> Photo Attachments (Multiple Allowed)
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                            <!-- Direct Camera Capture Button -->
+                            <label class="cursor-pointer px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg inline-flex items-center gap-1.5 shadow-sm transition">
+                                <i class="fa-solid fa-camera"></i> Take Photo (Camera)
+                                <input type="file" accept="image/*" capture="environment" onchange="handlePhotoSelect(event)" class="hidden">
+                            </label>
+                            <!-- Gallery Multi-Select Button -->
+                            <label class="cursor-pointer px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg inline-flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-folder-open text-amber-600"></i> Upload from Gallery
+                                <input type="file" accept="image/*" multiple onchange="handlePhotoSelect(event)" class="hidden">
+                            </label>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-500">You can snap photos directly using your handphone camera or select multiple images from your gallery. Click the red <strong>&times;</strong> on any photo to remove it if uploaded by mistake.</p>
+                    <div id="modalPhotoPreviewList" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                        <!-- Populated by renderModalPhotoPreviews() -->
                     </div>
                 </div>
             `;
         }
 
-        function renderPhotoBadge(photoName, titleText) {
-            if (!photoName) {
+        function renderModalPhotoPreviews() {
+            const container = document.getElementById('modalPhotoPreviewList');
+            if (!container) return;
+
+            if (pendingPhotos.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-3 text-xs text-slate-400 border border-dashed border-slate-300 rounded-lg bg-white">No photos attached yet.</div>`;
+                return;
+            }
+
+            container.innerHTML = pendingPhotos.map((p, idx) => `
+                <div class="relative group rounded-lg overflow-hidden border border-slate-300 bg-white shadow-sm">
+                    <img src="${p.dataUrl}" alt="${p.name}" class="h-20 w-full object-cover">
+                    <div class="p-1 bg-white/95 text-[10px] text-slate-600 truncate font-medium">${p.name}</div>
+                    <button type="button" onclick="removePendingPhoto(${idx})" class="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center shadow" title="Remove mistaken photo">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removePendingPhoto(idx) {
+            if (idx >= 0 && idx < pendingPhotos.length) {
+                const removed = pendingPhotos.splice(idx, 1);
+                renderModalPhotoPreviews();
+                showToast(`Removed photo: ${removed[0]?.name || 'image'}`);
+            }
+        }
+
+        function handlePhotoSelect(event) {
+            const files = Array.from(event.target.files || []);
+            if (files.length === 0) return;
+
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    // Compress image slightly onto a canvas so multi-photo sync stays fast
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const maxDim = 800;
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > maxDim || h > maxDim) {
+                            if (w > h) { h = Math.round(h * (maxDim / w)); w = maxDim; }
+                            else { w = Math.round(w * (maxDim / h)); h = maxDim; }
+                        }
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+                        photoPreviewCache[file.name] = compressedDataUrl;
+                        pendingPhotos.push({
+                            name: file.name,
+                            dataUrl: compressedDataUrl
+                        });
+                        renderModalPhotoPreviews();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Reset input so user can select the same or additional files again
+            event.target.value = '';
+        }
+
+        function renderPhotoBadge(itemOrPhotos, titleText) {
+            let photos = [];
+            if (Array.isArray(itemOrPhotos)) {
+                photos = itemOrPhotos;
+            } else if (itemOrPhotos && typeof itemOrPhotos === 'object') {
+                photos = normalizeRecordPhotos(itemOrPhotos);
+            } else if (typeof itemOrPhotos === 'string' && itemOrPhotos) {
+                photos = [{ name: itemOrPhotos, dataUrl: photoPreviewCache[itemOrPhotos] || `https://placehold.co/600x400/e2e8f0/0f172a?text=${encodeURIComponent(itemOrPhotos)}` }];
+            }
+
+            if (!photos || photos.length === 0) {
                 return `<span class="text-xs text-slate-400">No Photo</span>`;
             }
-            const safeName = photoName.replace(/'/g, "\\'");
-            const safeTitle = (titleText || '').replace(/'/g, "\\'");
+
+            const encodedPhotos = encodeURIComponent(JSON.stringify(photos));
+            const safeTitle = encodeURIComponent(titleText || 'Attached Inspection Photos');
             return `
-                <button type="button" onclick="viewAttachedPhoto('${safeName}', '${safeTitle}')" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition">
-                    <i class="fa-solid fa-image"></i> View
+                <button type="button" onclick="viewAttachedPhotosModal('${encodedPhotos}', '${safeTitle}')" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition">
+                    <i class="fa-solid fa-images"></i> View (${photos.length})
                 </button>
             `;
         }
 
-        function handlePhotoSelect(event) {
-            const file = event.target.files?.[0];
-            if (!file) return;
-            pendingPhotoFile = file;
-            const previewUrl = URL.createObjectURL(file);
-            photoPreviewCache[file.name] = previewUrl;
-            const previewImg = document.getElementById('modalPhotoPreviewImg');
-            const previewBox = document.getElementById('modalPhotoPreviewBox');
-            if (previewImg && previewBox) {
-                previewImg.src = previewUrl;
-                previewBox.classList.remove('hidden');
-            }
-        }
+        function viewAttachedPhotosModal(encodedPhotos, encodedTitle) {
+            let photos = [];
+            try { photos = JSON.parse(decodeURIComponent(encodedPhotos)); } catch (e) {}
+            const titleText = decodeURIComponent(encodedTitle || 'Attached Photos');
+            if (!photos || photos.length === 0) return;
 
-        function viewAttachedPhoto(photoName, titleText) {
-            if (!photoName) return;
-            const url = photoPreviewCache[photoName] || `https://placehold.co/600x400/e2e8f0/0f172a?text=${encodeURIComponent(photoName)}`;
             openModal(`
                 <div class="space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-200 pb-3">
                         <div>
-                            <h3 class="text-lg font-bold text-slate-900">${titleText || 'Attached Inspection Photo'}</h3>
-                            <p class="text-xs text-slate-500">File: ${photoName}</p>
+                            <h3 class="text-lg font-bold text-slate-900">${titleText}</h3>
+                            <p class="text-xs text-slate-500">${photos.length} Photo(s) Attached</p>
                         </div>
                         <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                     </div>
-                    <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center max-h-96">
-                        <img src="${url}" alt="${photoName}" class="max-h-96 w-auto object-contain">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[65vh] overflow-y-auto custom-scrollbar p-1">
+                        ${photos.map((p, i) => `
+                            <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex flex-col">
+                                <img src="${p.dataUrl || photoPreviewCache[p.name] || `https://placehold.co/600x400/e2e8f0/0f172a?text=${encodeURIComponent(p.name)}`}" alt="${p.name}" class="max-h-72 w-full object-contain bg-slate-900/5">
+                                <div class="p-2 text-xs font-semibold text-slate-700 border-t border-slate-200 flex justify-between items-center">
+                                    <span class="truncate">${i + 1}. ${p.name}</span>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
                     <div class="flex justify-end">
                         <button onclick="closeModal()" class="px-4 py-2 bg-slate-800 text-white text-xs font-semibold rounded-xl">Close Preview</button>
@@ -1658,14 +1818,22 @@
 
             zoneInspectionLogs.forEach((log, index) => {
                 const tr = document.createElement('tr');
+                const scoreNum = parseFloat(String(log.score).replace('%', ''));
+                const scoreBadgeClass = scoreNum >= 90
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : (scoreNum >= 75 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
+
                 tr.innerHTML = `
                     <td class="p-3 text-xs text-slate-500">${log.date}</td>
                     <td class="p-3 font-semibold text-slate-800">${log.zone}</td>
                     <td class="p-3">${log.inspector}</td>
-                    <td class="p-3"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">${log.score}</span></td>
+                    <td class="p-3"><span class="px-2.5 py-0.5 ${scoreBadgeClass} text-xs font-bold rounded-full">${log.score}</span></td>
                     <td class="p-3 text-xs text-slate-600">${log.remarks || '-'}</td>
-                    <td class="p-3 text-center">${renderPhotoBadge(log.photoName, log.zone)}</td>
-                    <td class="p-3 text-right">
+                    <td class="p-3 text-center">${renderPhotoBadge(log, log.zone)}</td>
+                    <td class="p-3 text-right whitespace-nowrap space-x-1">
+                        <button onclick="viewZoneInspectionDetail(${index})" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-semibold rounded-lg transition" title="View Submitted Parameter Details">
+                            <i class="fa-solid fa-eye mr-1"></i> View Details
+                        </button>
                         <button onclick="deleteZoneLog(${index})" class="text-rose-600 hover:text-rose-800 text-xs font-semibold px-2 py-1 rounded hover:bg-rose-50" title="Delete Log">
                             <i class="fa-solid fa-trash"></i>
                         </button>
@@ -1673,6 +1841,85 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        function viewZoneInspectionDetail(index) {
+            const log = zoneInspectionLogs[index];
+            if (!log) return;
+
+            const details = Array.isArray(log.details) ? log.details : [];
+            const photos = normalizeRecordPhotos(log);
+
+            const detailsRows = details.length > 0
+                ? details.map((d, i) => {
+                    let badge = `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full">Satisfactory</span>`;
+                    if (d.status === 'Unsatisfactory') {
+                        badge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 text-[11px] font-bold rounded-full">Unsatisfactory</span>`;
+                    } else if (d.status === 'NA') {
+                        badge = `<span class="px-2 py-0.5 bg-slate-200 text-slate-700 text-[11px] font-bold rounded-full">N/A</span>`;
+                    }
+                    return `
+                        <tr class="border-b border-slate-200 last:border-none">
+                            <td class="p-2.5 text-xs font-semibold text-slate-800">${i + 1}. ${d.name}</td>
+                            <td class="p-2.5 text-xs text-slate-500">${d.criteria || '-'}</td>
+                            <td class="p-2.5 text-center">${badge}</td>
+                            <td class="p-2.5 text-xs text-slate-700">${d.remark || '-'}</td>
+                        </tr>
+                    `;
+                }).join('')
+                : `<tr><td colspan="4" class="p-4 text-center text-xs text-slate-400">Detailed parameter breakdown not recorded for this legacy entry.</td></tr>`;
+
+            openModal(`
+                <div class="space-y-4">
+                    <div class="flex justify-between items-start border-b border-slate-200 pb-3">
+                        <div>
+                            <span class="px-2.5 py-0.5 bg-brand-50 text-brand-700 text-[11px] font-bold rounded-full border border-brand-200">Submitted Zone Inspection Report</span>
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900 mt-1">${log.zone}</h3>
+                            <p class="text-xs text-slate-500">Inspected by <strong>${log.inspector}</strong> on <strong>${log.date}</strong> &bull; Compliance Score: <strong class="text-emerald-600">${log.score}</strong></p>
+                        </div>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+
+                    <div class="rounded-xl border border-slate-200 overflow-hidden">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-100 text-slate-600 text-[11px] font-bold uppercase">
+                                <tr>
+                                    <th class="p-2.5">Parameter</th>
+                                    <th class="p-2.5">Criteria</th>
+                                    <th class="p-2.5 text-center">Evaluation</th>
+                                    <th class="p-2.5">Inspector Remark</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white">
+                                ${detailsRows}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                        <span class="font-bold text-slate-700 block">Overall Inspector Remarks:</span>
+                        <p class="text-slate-600">${log.remarks || 'No additional remarks.'}</p>
+                    </div>
+
+                    ${photos.length > 0 ? `
+                        <div class="space-y-2">
+                            <span class="text-xs font-bold text-slate-700 block"><i class="fa-solid fa-images text-brand-600 mr-1"></i> Attached Evidence Photos (${photos.length})</span>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                                ${photos.map(p => `
+                                    <div class="rounded-lg overflow-hidden border border-slate-200 bg-white">
+                                        <img src="${p.dataUrl}" alt="${p.name}" class="h-28 w-full object-cover">
+                                        <p class="p-1 text-[10px] text-slate-600 truncate">${p.name}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="flex justify-end pt-2">
+                        <button onclick="closeModal()" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl">Close Report</button>
+                    </div>
+                </div>
+            `);
         }
 
         function deleteZoneLog(index) {
@@ -1688,14 +1935,14 @@
         function startZoneInspection(zoneId) {
             const zone = ZONES_DATA.find(z => z.id === zoneId);
             if (!zone) return;
-            pendingPhotoFile = null;
+            pendingPhotos = [];
 
             let html = `
                 <div class="space-y-4">
                     <div class="flex justify-between items-start">
                         <div>
                             <h3 class="text-lg font-bold text-slate-900">${zone.name}</h3>
-                            <p class="text-xs text-slate-500">Conduct detailed parameter evaluation and attach inspection photo.</p>
+                            <p class="text-xs text-slate-500">Conduct detailed parameter evaluation. Any <strong>Unsatisfactory</strong> finding is automatically logged into Daily Findings & Non-Conformance.</p>
                         </div>
                         <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                     </div>
@@ -1726,7 +1973,7 @@
                                 N/A
                             </label>
                         </div>
-                        <input type="text" placeholder="Remarks or corrective action required..." class="w-full mt-2 p-2 text-xs border border-slate-300 rounded-lg bg-white">
+                        <input type="text" id="paramRemark_${index}" placeholder="Remarks or corrective action required..." class="w-full mt-2 p-2 text-xs border border-slate-300 rounded-lg bg-white">
                     </div>
                 `;
             });
@@ -1745,6 +1992,7 @@
             `;
 
             openModal(html);
+            renderModalPhotoPreviews();
         }
 
         function submitZoneInspection(e, zoneId) {
@@ -1752,11 +2000,39 @@
             const zone = ZONES_DATA.find(z => z.id === zoneId);
             if (!zone) return;
 
+            const today = new Date().toISOString().split('T')[0];
             let satCount = 0;
             let totalCount = zone.parameters.length;
-            zone.parameters.forEach((_, idx) => {
-                const selected = document.querySelector(`input[name="param_${idx}"]:checked`)?.value;
-                if (selected === 'Satisfactory' || selected === 'NA') satCount++;
+            let unsatCount = 0;
+            const paramDetails = [];
+
+            zone.parameters.forEach((param, idx) => {
+                const selected = document.querySelector(`input[name="param_${idx}"]:checked`)?.value || 'Satisfactory';
+                const remark = document.getElementById(`paramRemark_${idx}`)?.value?.trim() || '';
+                if (selected === 'Satisfactory' || selected === 'NA') {
+                    satCount++;
+                } else if (selected === 'Unsatisfactory') {
+                    unsatCount++;
+                    // Automatically log Unsatisfactory finding into Daily Findings & UAUC table
+                    uaucData.unshift({
+                        id: `NC-${Date.now()}-${idx}`,
+                        date: today,
+                        category: "Non-Conformance (Unsatisfactory Finding)",
+                        zone: zone.name,
+                        observation: `[${param.name}] Unsatisfactory (${param.criteria})`,
+                        immediateAction: remark || "Logged during Zone Inspection for corrective action",
+                        reporter: currentUser.name,
+                        risk: "MEDIUM",
+                        status: "In Progress",
+                        photos: [...pendingPhotos]
+                    });
+                }
+                paramDetails.push({
+                    name: param.name,
+                    criteria: param.criteria,
+                    status: selected,
+                    remark: remark
+                });
             });
 
             const scorePct = totalCount > 0 ? Math.round((satCount / totalCount) * 100) + "%" : "100%";
@@ -1764,108 +2040,131 @@
 
             zoneInspectionLogs.unshift({
                 id: `ZLOG-${Date.now()}`,
-                date: new Date().toISOString().split('T')[0],
+                date: today,
+                zoneId: zone.id,
                 zone: zone.name,
                 inspector: currentUser.name,
                 score: scorePct,
                 remarks: remarks,
-                photoName: pendingPhotoFile ? pendingPhotoFile.name : ""
+                photos: [...pendingPhotos],
+                details: paramDetails
             });
 
-            pendingPhotoFile = null;
+            pendingPhotos = [];
             saveAllData();
             closeModal();
-            showToast("Zone inspection & photo recorded successfully!");
+            if (unsatCount > 0) {
+                showToast(`Inspection saved! ${unsatCount} Unsatisfactory finding(s) auto-logged to Daily Findings.`);
+            } else {
+                showToast("Zone inspection & photos recorded successfully!");
+            }
         }
 
-        // --- FIRE FIGHTING EQUIPMENT LOGIC (ADD, EDIT, DELETE + MFG YEAR + 5 HYDRANT CHECKS) ---
+        // --- FIRE FIGHTING EQUIPMENT CHECKLIST (EXTINGUISHERS & PUMPS) ---
         function switchFireSubCategory(sub) {
-            document.getElementById('fireSub-extinguishers').classList.add('hidden');
-            document.getElementById('fireSub-pumps').classList.add('hidden');
-            document.getElementById('fireSubTab-extinguishers').className = "pb-3 border-b-2 border-transparent font-medium text-slate-500 text-sm flex items-center gap-2";
-            document.getElementById('fireSubTab-pumps').className = "pb-3 border-b-2 border-transparent font-medium text-slate-500 text-sm flex items-center gap-2";
+            const extTab = document.getElementById('fireSubTab-extinguishers');
+            const pumpTab = document.getElementById('fireSubTab-pumps');
+            const extView = document.getElementById('fireSub-extinguishers');
+            const pumpView = document.getElementById('fireSub-pumps');
 
             if (sub === 'extinguishers') {
-                document.getElementById('fireSub-extinguishers').classList.remove('hidden');
-                document.getElementById('fireSubTab-extinguishers').className = "pb-3 border-b-2 border-brand-600 font-semibold text-brand-600 text-sm flex items-center gap-2";
+                extView.classList.remove('hidden');
+                pumpView.classList.add('hidden');
+                extTab.className = "pb-3 border-b-2 border-brand-600 font-semibold text-brand-600 text-sm flex items-center gap-2";
+                pumpTab.className = "pb-3 border-b-2 border-transparent font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2";
             } else {
-                document.getElementById('fireSub-pumps').classList.remove('hidden');
-                document.getElementById('fireSubTab-pumps').className = "pb-3 border-b-2 border-brand-600 font-semibold text-brand-600 text-sm flex items-center gap-2";
+                extView.classList.add('hidden');
+                pumpView.classList.remove('hidden');
+                pumpTab.className = "pb-3 border-b-2 border-brand-600 font-semibold text-brand-600 text-sm flex items-center gap-2";
+                extTab.className = "pb-3 border-b-2 border-transparent font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2";
             }
         }
 
         function renderExtinguishersTable() {
             const tbody = document.getElementById('extinguisherTableBody');
             if (!tbody) return;
+            const query = (document.getElementById('searchExtinguisher')?.value || '').toLowerCase();
             tbody.innerHTML = '';
-            document.getElementById('extinguisherCount').textContent = fireExtinguishers.length;
 
+            let shown = 0;
             fireExtinguishers.forEach((item, index) => {
-                const tr = document.createElement('tr');
-                let statusBadge = `<span class="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">Good</span>`;
+                const match = item.id.toLowerCase().includes(query) ||
+                    (item.mfgYear || '').toLowerCase().includes(query) ||
+                    item.zone.toLowerCase().includes(query) ||
+                    item.type.toLowerCase().includes(query);
+                if (!match) return;
+                shown++;
+
+                let statusBadge = `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">OK</span>`;
                 if (item.status === 'EXPIRED_SOON') {
-                    statusBadge = `<span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">Expiry Warning</span>`;
+                    statusBadge = `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">Expiring Soon</span>`;
                 } else if (item.status === 'DEFECT') {
-                    statusBadge = `<span class="px-2 py-1 bg-rose-100 text-rose-800 text-xs font-semibold rounded-full">Defective</span>`;
+                    statusBadge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 text-xs font-semibold rounded-full">Defect</span>`;
                 }
 
+                const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="p-3 font-semibold text-slate-900">${item.id}</td>
+                    <td class="p-3 font-bold text-slate-800">${item.id}</td>
                     <td class="p-3">${item.type}</td>
                     <td class="p-3">${item.capacity}</td>
-                    <td class="p-3 font-mono text-slate-700">${item.mfgYear || '2022'}</td>
-                    <td class="p-3">${item.zone}</td>
+                    <td class="p-3 font-mono text-xs">${item.mfgYear || '2022'}</td>
+                    <td class="p-3 text-xs">${item.zone}</td>
                     <td class="p-3">${item.pressure}</td>
-                    <td class="p-3 font-medium">${item.expiry}</td>
+                    <td class="p-3 text-xs">${item.expiry}</td>
                     <td class="p-3 text-center">${statusBadge}</td>
                     <td class="p-3 text-right whitespace-nowrap space-x-1">
-                        <button onclick="openFireExtinguisherModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold" title="Edit / Inspect">
+                        <button onclick="openFireExtinguisherModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold">
                             <i class="fa-solid fa-pen-to-square"></i> Edit
                         </button>
-                        <button onclick="deleteFireExtinguisher(${index})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold" title="Delete">
+                        <button onclick="deleteFireExtinguisher(${index})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+
+            const countEl = document.getElementById('extinguisherCount');
+            if (countEl) countEl.textContent = shown;
         }
 
         function filterExtinguishers() {
-            const val = document.getElementById('searchExtinguisher').value.toLowerCase();
-            const rows = document.querySelectorAll('#extinguisherTableBody tr');
-            rows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(val) ? '' : 'none';
-            });
+            renderExtinguishersTable();
         }
 
         function openFireExtinguisherModal(editIndex = null) {
             const isEdit = editIndex !== null && fireExtinguishers[editIndex];
             const item = isEdit ? fireExtinguishers[editIndex] : {
-                id: "", type: "Dry Powder", capacity: "9.0 kg", mfgYear: "2024", zone: ZONES_DATA[0].name, pressure: "Good", expiry: "2027-06-01", status: "OK"
+                id: `PFE-Z1-0${fireExtinguishers.length + 1}`,
+                type: "Dry Powder",
+                capacity: "9.0 kg",
+                mfgYear: "2024",
+                zone: ZONES_DATA[0].name,
+                pressure: "Good",
+                expiry: "2027-06-30",
+                status: "OK"
             };
 
             openModal(`
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? 'Edit / Inspect Portable Fire Extinguisher' : 'Add Portable Fire Extinguisher'}</h3>
+                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? `Edit Extinguisher ${item.id}` : 'Add Portable Fire Extinguisher'}</h3>
                     <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
                 <form onsubmit="saveFireExtinguisher(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Serial / Tag ID</label>
-                            <input type="text" id="feId" required value="${item.id}" placeholder="e.g. PFE-Z5-09" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <input type="text" id="pfeId" required value="${item.id}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Year of Manufacture</label>
-                            <input type="number" id="feMfgYear" required min="1995" max="2035" value="${item.mfgYear || '2023'}" placeholder="e.g. 2023" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <input type="number" id="pfeMfgYear" required min="1995" max="2035" value="${item.mfgYear || '2023'}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Type</label>
-                            <select id="feType" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <select id="pfeType" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                                 <option ${item.type === 'Dry Powder' ? 'selected' : ''}>Dry Powder</option>
                                 <option ${item.type === 'CO2' ? 'selected' : ''}>CO2</option>
                                 <option ${item.type === 'Foam' ? 'selected' : ''}>Foam</option>
@@ -1873,19 +2172,19 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Capacity</label>
-                            <input type="text" id="feCap" value="${item.capacity}" placeholder="9.0 kg" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <input type="text" id="pfeCap" required value="${item.capacity}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
-                        <select id="feZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        <select id="pfeZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                             ${ZONES_DATA.map(z => `<option ${item.zone === z.name ? 'selected' : ''}>${z.name}</option>`).join('')}
                         </select>
                     </div>
                     <div class="grid grid-cols-3 gap-3">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Pressure</label>
-                            <select id="fePressure" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Pressure Gauge</label>
+                            <select id="pfePressure" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                                 <option ${item.pressure === 'Good' ? 'selected' : ''}>Good</option>
                                 <option ${item.pressure === 'Low' ? 'selected' : ''}>Low</option>
                                 <option ${item.pressure === 'Overcharged' ? 'selected' : ''}>Overcharged</option>
@@ -1893,19 +2192,19 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Expiry Date</label>
-                            <input type="date" id="feExpiry" required value="${item.expiry}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <input type="date" id="pfeExpiry" required value="${item.expiry}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Condition Status</label>
-                            <select id="feStatus" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                                <option value="OK" ${item.status === 'OK' ? 'selected' : ''}>Good (OK)</option>
-                                <option value="EXPIRED_SOON" ${item.status === 'EXPIRED_SOON' ? 'selected' : ''}>Expiry Warning</option>
-                                <option value="DEFECT" ${item.status === 'DEFECT' ? 'selected' : ''}>Defective</option>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                            <select id="pfeStatus" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option value="OK" ${item.status === 'OK' ? 'selected' : ''}>OK</option>
+                                <option value="EXPIRED_SOON" ${item.status === 'EXPIRED_SOON' ? 'selected' : ''}>Expiring Soon</option>
+                                <option value="DEFECT" ${item.status === 'DEFECT' ? 'selected' : ''}>Defect</option>
                             </select>
                         </div>
                     </div>
                     <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm">
-                        ${isEdit ? 'Update Extinguisher Record' : 'Save Extinguisher Record'}
+                        ${isEdit ? 'Update Extinguisher' : 'Save Extinguisher'}
                     </button>
                 </form>
             `);
@@ -1914,14 +2213,14 @@
         function saveFireExtinguisher(e, editIndex) {
             e.preventDefault();
             const record = {
-                id: document.getElementById('feId').value,
-                type: document.getElementById('feType').value,
-                capacity: document.getElementById('feCap').value || "9.0 kg",
-                mfgYear: document.getElementById('feMfgYear').value || "2023",
-                zone: document.getElementById('feZone').value,
-                pressure: document.getElementById('fePressure').value,
-                expiry: document.getElementById('feExpiry').value,
-                status: document.getElementById('feStatus').value
+                id: document.getElementById('pfeId').value.trim(),
+                type: document.getElementById('pfeType').value,
+                capacity: document.getElementById('pfeCap').value.trim(),
+                mfgYear: document.getElementById('pfeMfgYear').value.trim(),
+                zone: document.getElementById('pfeZone').value,
+                pressure: document.getElementById('pfePressure').value,
+                expiry: document.getElementById('pfeExpiry').value,
+                status: document.getElementById('pfeStatus').value
             };
 
             if (editIndex !== null && editIndex !== undefined) {
@@ -1935,16 +2234,7 @@
             closeModal();
         }
 
-        function deleteFireExtinguisher(index) {
-            const item = fireExtinguishers[index];
-            if (!item) return;
-            requestSecureDelete("Extinguisher", `${item.id} (${item.zone})`, item, () => {
-                fireExtinguishers.splice(index, 1);
-                showToast("Fire extinguisher moved to Recovery Vault.");
-            });
-        }
-
-        // --- HOSE REEL, HYDRANT & PUMP (Hose Condition, Coupling, Nozzle, Fire Hydrant Box & Valve) ---
+        // --- HOSE REEL, HYDRANT & PUMP (5-Point Hydrant AND 9-Point Pump Criteria) ---
         function renderPumpTable() {
             const tbody = document.getElementById('pumpTableBody');
             if (!tbody) return;
@@ -1955,15 +2245,30 @@
 
             firePumps.forEach((item, index) => {
                 const badgeClass = item.status === 'PASS' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800';
+                const cat = item.equipCategory || 'Hose Reel / Hydrant';
+                const isPump = cat.includes('Pump');
+
+                const criteriaSummary = isPump
+                    ? `<div class="text-xs space-y-0.5 text-slate-600">
+                        <div><strong>Battery:</strong> ${item.batteryCond || 'Good'} &bull; <strong>Oil:</strong> ${item.engineOil || 'Normal'} &bull; <strong>Fuel:</strong> ${item.dieselFuel || 'N/A'}</div>
+                        <div><strong>Coolant:</strong> ${item.radiatorCoolant || 'Normal'} &bull; <strong>Panel:</strong> ${item.controlPanel || 'Auto'} &bull; <strong>Valves:</strong> ${item.inletOutletValve || 'Open'}</div>
+                        <div><strong>Gauge:</strong> ${item.pressureGauge || 'OK'} &bull; <strong>Motor:</strong> ${item.electricMotor || 'OK'} &bull; <strong>Cut-In/Out:</strong> ${item.cutInOutPressure || 'Normal'}</div>
+                       </div>`
+                    : `<div class="text-xs space-y-0.5 text-slate-600">
+                        <div><strong>Hose:</strong> ${item.hoseCondition || 'Good'} &bull; <strong>Coupling:</strong> ${item.coupling || 'Good'} &bull; <strong>Nozzle:</strong> ${item.nozzle || 'Functional'}</div>
+                        <div><strong>Hydrant Box:</strong> ${item.hydrantBox || 'Good'} &bull; <strong>Valve:</strong> ${item.valve || 'Operational'}</div>
+                       </div>`;
+
+                const catBadge = isPump
+                    ? `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[11px] font-bold rounded">${cat}</span>`
+                    : `<span class="px-2 py-0.5 bg-sky-100 text-sky-800 text-[11px] font-bold rounded">${cat}</span>`;
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="p-3 font-bold text-slate-800">${item.name}</td>
+                    <td class="p-3">${catBadge}</td>
                     <td class="p-3 text-xs">${item.location}</td>
-                    <td class="p-3">${item.hoseCondition || 'Good'}</td>
-                    <td class="p-3">${item.coupling || 'Good'}</td>
-                    <td class="p-3">${item.nozzle || 'Functional'}</td>
-                    <td class="p-3">${item.hydrantBox || 'Good'}</td>
-                    <td class="p-3">${item.valve || 'Operational'}</td>
+                    <td class="p-3">${criteriaSummary}</td>
                     <td class="p-3 text-xs text-slate-500">${item.lastTest}</td>
                     <td class="p-3 text-center"><span class="px-2 py-0.5 ${badgeClass} text-xs font-semibold rounded-full">${item.status}</span></td>
                     <td class="p-3 text-right whitespace-nowrap space-x-1">
@@ -1979,30 +2284,69 @@
             });
         }
 
-        function openFirePumpModal(editIndex = null) {
+        function togglePumpModalCriteriaFields() {
+            const cat = document.getElementById('pumpEquipCategory')?.value || 'Hose Reel / Hydrant';
+            const hydrantBoxEl = document.getElementById('hydrantCriteriaSection');
+            const pumpBoxEl = document.getElementById('pumpCriteriaSection');
+            if (!hydrantBoxEl || !pumpBoxEl) return;
+
+            if (cat === 'Hose Reel / Hydrant') {
+                hydrantBoxEl.classList.remove('hidden');
+                pumpBoxEl.classList.add('hidden');
+            } else {
+                hydrantBoxEl.classList.add('hidden');
+                pumpBoxEl.classList.remove('hidden');
+            }
+        }
+
+        function openFirePumpModal(editIndex = null, defaultMode = 'HYDRANT') {
             const isEdit = editIndex !== null && firePumps[editIndex];
+            const defaultCat = defaultMode === 'PUMP' ? 'Standby Diesel Pump' : 'Hose Reel / Hydrant';
             const item = isEdit ? firePumps[editIndex] : {
+                equipCategory: defaultCat,
                 name: "",
-                location: ZONES_DATA[0].name,
+                location: ZONES_DATA[2].name,
+                // 5-Point Hose Reel / Hydrant
                 hoseCondition: "Good",
                 coupling: "Good",
                 nozzle: "Functional",
                 hydrantBox: "Good",
                 valve: "Operational",
+                // 9-Point Pump Criteria (Duty Pump, Jockey Pump & Standby Diesel Pump)
+                batteryCond: "Good (12.8V)",
+                engineOil: "Normal Level",
+                dieselFuel: "Full (>80%)",
+                radiatorCoolant: "Normal Level",
+                controlPanel: "Auto Mode / Good",
+                inletOutletValve: "Open & Operational",
+                pressureGauge: "Functional (8.0 Bar)",
+                electricMotor: "Good / Normal",
+                cutInOutPressure: "Cut-In 6.5 Bar / Cut-Out 8.5 Bar",
                 lastTest: new Date().toISOString().split('T')[0],
                 status: "PASS"
             };
 
+            const currentCat = item.equipCategory || 'Hose Reel / Hydrant';
+
             openModal(`
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? 'Edit / Inspect Hose Reel, Hydrant & Pump' : 'Add Hose Reel, Hydrant & Pump'}</h3>
+                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? 'Edit / Inspect Fire Equipment & Pump' : 'Add Hose Reel, Hydrant & Fire Pump Inspection'}</h3>
                     <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
                 <form onsubmit="saveFirePump(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Equipment Category</label>
+                            <select id="pumpEquipCategory" onchange="togglePumpModalCriteriaFields()" class="w-full p-2 border border-slate-300 rounded-xl text-sm bg-white font-semibold text-brand-700">
+                                <option value="Hose Reel / Hydrant" ${currentCat === 'Hose Reel / Hydrant' ? 'selected' : ''}>Hose Reel / Hydrant</option>
+                                <option value="Duty Pump" ${currentCat === 'Duty Pump' ? 'selected' : ''}>Duty Pump</option>
+                                <option value="Jockey Pump" ${currentCat === 'Jockey Pump' ? 'selected' : ''}>Jockey Pump</option>
+                                <option value="Standby Diesel Pump" ${currentCat === 'Standby Diesel Pump' ? 'selected' : ''}>Standby Diesel Pump</option>
+                            </select>
+                        </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Equipment Name / Tag</label>
-                            <input type="text" id="pumpName" required value="${item.name}" placeholder="e.g. Hose Reel #02 / Hydrant #05" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <input type="text" id="pumpName" required value="${item.name}" placeholder="e.g. Standby Diesel Pump #1" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Zone / Location</label>
@@ -2012,8 +2356,9 @@
                         </div>
                     </div>
 
-                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">5-Point Inspection Criteria</p>
+                    <!-- 5-Point Hose Reel / Hydrant Criteria -->
+                    <div id="hydrantCriteriaSection" class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3 ${currentCat === 'Hose Reel / Hydrant' ? '' : 'hidden'}">
+                        <p class="text-xs font-bold uppercase tracking-wider text-sky-700"><i class="fa-solid fa-faucet-drip mr-1"></i> 5-Point Hose Reel & Hydrant Inspection Criteria</p>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">1. Hose Condition</label>
@@ -2058,6 +2403,87 @@
                         </div>
                     </div>
 
+                    <!-- 9-Point Pump Criteria (Duty Pump, Jockey Pump & Standby Diesel Pump) -->
+                    <div id="pumpCriteriaSection" class="p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-200 space-y-3 ${currentCat !== 'Hose Reel / Hydrant' ? '' : 'hidden'}">
+                        <p class="text-xs font-bold uppercase tracking-wider text-emerald-800"><i class="fa-solid fa-gauge-high mr-1"></i> 9-Point Pump Inspection Criteria (Duty, Jockey & Standby Diesel Pump)</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">1. Battery Condition (Diesel Pump)</label>
+                                <select id="pumpBatteryCond" class="w-full p-2 border border-slate-300 rounded-xl text-xs bg-white">
+                                    <option ${item.batteryCond === 'Good (12.8V)' ? 'selected' : ''}>Good (12.8V)</option>
+                                    <option ${item.batteryCond === 'Weak / Needs Charge' ? 'selected' : ''}>Weak / Needs Charge</option>
+                                    <option ${item.batteryCond === 'Corroded Terminals' ? 'selected' : ''}>Corroded Terminals</option>
+                                    <option ${item.batteryCond === 'Defective' ? 'selected' : ''}>Defective</option>
+                                    <option ${item.batteryCond === 'N/A' ? 'selected' : ''}>N/A</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">2. Engine Oil (Diesel Pump)</label>
+                                <select id="pumpEngineOil" class="w-full p-2 border border-slate-300 rounded-xl text-xs bg-white">
+                                    <option ${item.engineOil === 'Normal Level' ? 'selected' : ''}>Normal Level</option>
+                                    <option ${item.engineOil === 'Low / Top-up Needed' ? 'selected' : ''}>Low / Top-up Needed</option>
+                                    <option ${item.engineOil === 'Dirty / Due for Change' ? 'selected' : ''}>Dirty / Due for Change</option>
+                                    <option ${item.engineOil === 'Oil Leak Detected' ? 'selected' : ''}>Oil Leak Detected</option>
+                                    <option ${item.engineOil === 'N/A' ? 'selected' : ''}>N/A</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">3. Diesel Fuel</label>
+                                <select id="pumpDieselFuel" class="w-full p-2 border border-slate-300 rounded-xl text-xs bg-white">
+                                    <option ${item.dieselFuel === 'Full (>80%)' ? 'selected' : ''}>Full (>80%)</option>
+                                    <option ${item.dieselFuel === 'Half (50% - 80%)' ? 'selected' : ''}>Half (50% - 80%)</option>
+                                    <option ${item.dieselFuel === 'Low (<50% - Refill)' ? 'selected' : ''}>Low (<50% - Refill)</option>
+                                    <option ${item.dieselFuel === 'Fuel Line Leak' ? 'selected' : ''}>Fuel Line Leak</option>
+                                    <option ${item.dieselFuel === 'N/A' ? 'selected' : ''}>N/A</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">4. Radiator Coolant</label>
+                                <select id="pumpRadiatorCoolant" class="w-full p-2 border border-slate-300 rounded-xl text-xs bg-white">
+                                    <option ${item.radiatorCoolant === 'Normal Level' ? 'selected' : ''}>Normal Level</option>
+                                    <option ${item.radiatorCoolant === 'Low / Top-up Needed' ? 'selected' : ''}>Low / Top-up Needed</option>
+                                    <option ${item.radiatorCoolant === 'Leaking Hose/Radiator' ? 'selected' : ''}>Leaking Hose/Radiator</option>
+                                    <option ${item.radiatorCoolant === 'N/A' ? 'selected' : ''}>N/A</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">5. Control Panel</label>
+                                <select id="pumpControlPanel" class="w-full p-2 border border-slate-300 rounded-xl text-xs bg-white">
+                                    <option ${item.controlPanel === 'Auto Mode / Good' ? 'selected' : ''}>Auto Mode / Good</option>
+                                    <option ${item.controlPanel === 'Manual Mode' ? 'selected' : ''}>Manual Mode</option>
+                                    <option ${item.controlPanel === 'Fault / Alarm Active' ? 'selected' : ''}>Fault / Alarm Active</option>
+                                    <option ${item.controlPanel === 'Indicator Lamp Fault' ? 'selected' : ''}>Indicator Lamp Fault</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">6. Water Inlet & Outlet Valve</label>
+                                <select id="pumpInletOutletValve" class="w-full p-2 border border-slate-300 rounded-xl text-xs bg-white">
+                                    <option ${item.inletOutletValve === 'Open & Operational' ? 'selected' : ''}>Open & Operational</option>
+                                    <option ${item.inletOutletValve === 'Partially Closed' ? 'selected' : ''}>Partially Closed</option>
+                                    <option ${item.inletOutletValve === 'Leaking Gland/Seal' ? 'selected' : ''}>Leaking Gland/Seal</option>
+                                    <option ${item.inletOutletValve === 'Jammed / Defective' ? 'selected' : ''}>Jammed / Defective</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">7. Pressure Gauge</label>
+                                <input type="text" id="pumpPressureGauge" value="${item.pressureGauge || 'Functional (8.0 Bar)'}" placeholder="e.g. Functional (8.2 Bar)" class="w-full p-2 border border-slate-300 rounded-xl text-xs bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">8. Electric Motor Pump</label>
+                                <select id="pumpElectricMotor" class="w-full p-2 border border-slate-300 rounded-xl text-xs bg-white">
+                                    <option ${item.electricMotor === 'Good / Normal' ? 'selected' : ''}>Good / Normal</option>
+                                    <option ${item.electricMotor === 'Abnormal Noise/Vibration' ? 'selected' : ''}>Abnormal Noise/Vibration</option>
+                                    <option ${item.electricMotor === 'Overheating / Tripped' ? 'selected' : ''}>Overheating / Tripped</option>
+                                    <option ${item.electricMotor === 'N/A (Diesel Pump)' ? 'selected' : ''}>N/A (Diesel Pump)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">9. Cut-In & Cut-Out Pressure</label>
+                                <input type="text" id="pumpCutInOutPressure" value="${item.cutInOutPressure || 'Cut-In 6.5 Bar / Cut-Out 8.5 Bar'}" placeholder="e.g. Cut-in 6.5 / Cut-out 8.5 Bar" class="w-full p-2 border border-slate-300 rounded-xl text-xs bg-white">
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Last Test Date</label>
@@ -2073,7 +2499,7 @@
                     </div>
 
                     <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm">
-                        ${isEdit ? 'Update Equipment Record' : 'Save Equipment Record'}
+                        ${isEdit ? 'Update Equipment / Pump Record' : 'Save Equipment / Pump Record'}
                     </button>
                 </form>
             `);
@@ -2083,26 +2509,45 @@
             e.preventDefault();
             const record = {
                 id: `HRP-${Date.now()}`,
+                equipCategory: document.getElementById('pumpEquipCategory').value,
                 name: document.getElementById('pumpName').value,
                 location: document.getElementById('pumpLocation').value,
-                hoseCondition: document.getElementById('pumpHoseCondition').value,
-                coupling: document.getElementById('pumpCoupling').value,
-                nozzle: document.getElementById('pumpNozzle').value,
-                hydrantBox: document.getElementById('pumpHydrantBox').value,
-                valve: document.getElementById('pumpValve').value,
+                hoseCondition: document.getElementById('pumpHoseCondition')?.value || "Good",
+                coupling: document.getElementById('pumpCoupling')?.value || "Good",
+                nozzle: document.getElementById('pumpNozzle')?.value || "Functional",
+                hydrantBox: document.getElementById('pumpHydrantBox')?.value || "Good",
+                valve: document.getElementById('pumpValve')?.value || "Operational",
+                batteryCond: document.getElementById('pumpBatteryCond')?.value || "Good (12.8V)",
+                engineOil: document.getElementById('pumpEngineOil')?.value || "Normal Level",
+                dieselFuel: document.getElementById('pumpDieselFuel')?.value || "Full (>80%)",
+                radiatorCoolant: document.getElementById('pumpRadiatorCoolant')?.value || "Normal Level",
+                controlPanel: document.getElementById('pumpControlPanel')?.value || "Auto Mode / Good",
+                inletOutletValve: document.getElementById('pumpInletOutletValve')?.value || "Open & Operational",
+                pressureGauge: document.getElementById('pumpPressureGauge')?.value || "Functional",
+                electricMotor: document.getElementById('pumpElectricMotor')?.value || "Good / Normal",
+                cutInOutPressure: document.getElementById('pumpCutInOutPressure')?.value || "Normal",
                 lastTest: document.getElementById('pumpLastTest').value,
                 status: document.getElementById('pumpStatus').value
             };
 
             if (editIndex !== null && editIndex !== undefined) {
                 firePumps[editIndex] = record;
-                showToast("Hose Reel / Hydrant record updated!");
+                showToast("Fire equipment / pump record updated!");
             } else {
                 firePumps.push(record);
-                showToast("New Hose Reel / Hydrant added!");
+                showToast("New Fire equipment / pump record added!");
             }
             saveAllData();
             closeModal();
+        }
+
+        function deleteFireExtinguisher(index) {
+            const item = fireExtinguishers[index];
+            if (!item) return;
+            requestSecureDelete("Extinguisher", `${item.id} (${item.zone})`, item, () => {
+                fireExtinguishers.splice(index, 1);
+                showToast("Fire extinguisher moved to Recovery Vault.");
+            });
         }
 
         function deleteFirePump(index) {
@@ -2110,7 +2555,7 @@
             if (!item) return;
             requestSecureDelete("Hydrant/Pump", `${item.name} (${item.location})`, item, () => {
                 firePumps.splice(index, 1);
-                showToast("Hose Reel / Hydrant moved to Recovery Vault.");
+                showToast("Hose Reel / Hydrant / Pump moved to Recovery Vault.");
             });
         }
 
@@ -2139,7 +2584,7 @@
                     <td class="p-3 text-slate-700">${item.finding}</td>
                     <td class="p-3 font-medium">${item.pic}</td>
                     <td class="p-3 text-xs">${item.target}</td>
-                    <td class="p-3 text-center">${renderPhotoBadge(item.photoName, item.ref)}</td>
+                    <td class="p-3 text-center">${renderPhotoBadge(item, item.ref)}</td>
                     <td class="p-3 text-center"><span class="px-2 py-1 ${badgeClass} text-xs font-semibold rounded-full">${item.status}</span></td>
                     <td class="p-3 text-right whitespace-nowrap space-x-1">
                         <button onclick="openCarParModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold">
@@ -2212,7 +2657,6 @@
         }
 
         function openCarParModal(editIndex = null) {
-            pendingPhotoFile = null;
             const isEdit = editIndex !== null && carParData[editIndex];
             const item = isEdit ? carParData[editIndex] : {
                 ref: `CAR-2026-0${Math.floor(Math.random() * 90 + 10)}`,
@@ -2222,8 +2666,9 @@
                 pic: "",
                 target: new Date().toISOString().split('T')[0],
                 status: "OPEN",
-                photoName: ""
+                photos: []
             };
+            initPendingPhotosFromItem(item);
 
             openModal(`
                 <div class="flex justify-between items-center mb-4">
@@ -2268,12 +2713,13 @@
                             <input type="date" id="carTarget" required value="${item.target}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                         </div>
                     </div>
-                    ${getPhotoInputHtml(item.photoName)}
+                    ${getPhotoInputHtml()}
                     <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm">
                         ${isEdit ? 'Save Changes' : 'Register CAR/PAR'}
                     </button>
                 </form>
             `);
+            renderModalPhotoPreviews();
         }
 
         function saveCarPar(e, editIndex) {
@@ -2290,10 +2736,10 @@
                 pic: document.getElementById('carPic').value,
                 target: document.getElementById('carTarget').value,
                 status: document.getElementById('carStatus').value,
-                photoName: pendingPhotoFile ? pendingPhotoFile.name : (existing?.photoName || "")
+                photos: [...pendingPhotos]
             };
 
-            pendingPhotoFile = null;
+            pendingPhotos = [];
             if (isEdit) {
                 carParData[editIndex] = record;
                 showToast("CAR/PAR record updated!");
@@ -2308,29 +2754,41 @@
         function deleteCarPar(index) {
             const item = carParData[index];
             if (!item) return;
-            requestSecureDelete("CAR/PAR", `${item.ref} - ${item.zone}`, item, () => {
+            requestSecureDelete("CAR/PAR", `${item.ref} (${item.zone})`, item, () => {
                 carParData.splice(index, 1);
-                showToast("CAR/PAR entry moved to Recovery Vault.");
+                showToast("CAR/PAR record moved to Recovery Vault.");
             });
         }
 
-        // --- UAUC LOGIC (ADD, EDIT, DELETE + PHOTO ATTACHMENT) ---
+        // --- UAUC & DAILY NON-CONFORMANCE FINDINGS LOGIC ---
         function renderUaucTable() {
             const tbody = document.getElementById('uaucTableBody');
             if (!tbody) return;
+            const categoryFilter = document.getElementById('filterUaucCategory')?.value || 'ALL';
             tbody.innerHTML = '';
+
             uaucData.forEach((item, index) => {
+                if (categoryFilter !== 'ALL' && item.category !== categoryFilter) return;
+
+                let catClass = 'text-indigo-600';
+                if (item.category === 'Unsafe Act') catClass = 'text-amber-600';
+                else if (item.category.includes('Non-Conformance')) catClass = 'text-rose-600';
+
+                const statusBadge = item.status === 'Closed'
+                    ? `<span class="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">Closed</span>`
+                    : `<span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">${item.status}</span>`;
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="p-3 text-xs text-slate-500">${item.date}</td>
-                    <td class="p-3 font-semibold ${item.category === 'Unsafe Act' ? 'text-amber-600' : 'text-indigo-600'}">${item.category}</td>
+                    <td class="p-3 font-semibold ${catClass}">${item.category}</td>
                     <td class="p-3 text-xs">${item.zone}</td>
                     <td class="p-3 text-slate-700">${item.observation}</td>
                     <td class="p-3 text-slate-600 text-xs">${item.immediateAction}</td>
                     <td class="p-3 font-medium">${item.reporter}</td>
-                    <td class="p-3 text-center">${renderPhotoBadge(item.photoName, item.category)}</td>
+                    <td class="p-3 text-center">${renderPhotoBadge(item, item.category)}</td>
                     <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 text-slate-800 text-xs font-bold rounded">${item.risk}</span></td>
-                    <td class="p-3 text-center"><span class="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">${item.status}</span></td>
+                    <td class="p-3 text-center">${statusBadge}</td>
                     <td class="p-3 text-right whitespace-nowrap space-x-1">
                         <button onclick="openUaucModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold">
                             <i class="fa-solid fa-pen-to-square"></i> Edit
@@ -2344,24 +2802,24 @@
             });
         }
 
-        function openUaucModal(editIndex = null) {
-            pendingPhotoFile = null;
+        function openUaucModal(editIndex = null, defaultCat = "Unsafe Act") {
             const isEdit = editIndex !== null && uaucData[editIndex];
             const item = isEdit ? uaucData[editIndex] : {
                 date: new Date().toISOString().split('T')[0],
-                category: "Unsafe Act",
+                category: defaultCat,
                 zone: ZONES_DATA[0].name,
                 observation: "",
                 immediateAction: "",
                 reporter: currentUser.name,
                 risk: "MEDIUM",
                 status: "In Progress",
-                photoName: ""
+                photos: []
             };
+            initPendingPhotosFromItem(item);
 
             openModal(`
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? 'Edit UAUC Report' : 'Log UAUC Incident / Finding'}</h3>
+                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? 'Edit Daily Finding / UAUC Report' : 'Log Daily Non-Conformance Finding / UAUC'}</h3>
                     <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
                 <form onsubmit="saveUauc(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
@@ -2369,8 +2827,9 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Category</label>
                             <select id="uaucCategory" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
-                                <option ${item.category === 'Unsafe Act' ? 'selected' : ''}>Unsafe Act</option>
-                                <option ${item.category === 'Unsafe Condition' ? 'selected' : ''}>Unsafe Condition</option>
+                                <option value="Non-Conformance (Unsatisfactory Finding)" ${item.category === 'Non-Conformance (Unsatisfactory Finding)' ? 'selected' : ''}>Non-Conformance (Unsatisfactory Finding)</option>
+                                <option value="Unsafe Act" ${item.category === 'Unsafe Act' ? 'selected' : ''}>Unsafe Act (UA)</option>
+                                <option value="Unsafe Condition" ${item.category === 'Unsafe Condition' ? 'selected' : ''}>Unsafe Condition (UC)</option>
                             </select>
                         </div>
                         <div>
@@ -2391,11 +2850,11 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Observed Hazard / Finding</label>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Observed Hazard / Non-Conformance Finding</label>
                         <textarea id="uaucObs" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2">${item.observation}</textarea>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Immediate Action Taken</label>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Immediate Action / Corrective Plan</label>
                         <input type="text" id="uaucAction" required value="${item.immediateAction}" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
@@ -2415,17 +2874,18 @@
                             </select>
                         </div>
                     </div>
-                    ${getPhotoInputHtml(item.photoName)}
+                    ${getPhotoInputHtml()}
                     <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm">
-                        ${isEdit ? 'Update UAUC Report' : 'Submit UAUC Report'}
+                        ${isEdit ? 'Update Report' : 'Submit Report'}
                     </button>
                 </form>
             `);
+            renderModalPhotoPreviews();
         }
 
         // Public UAUC submission modal directly from the Login Screen (no login required)
         function openPublicUaucModal() {
-            pendingPhotoFile = null;
+            pendingPhotos = [];
             const today = new Date().toISOString().split('T')[0];
             openModal(`
                 <div class="flex justify-between items-start mb-4 border-b border-slate-200 pb-3">
@@ -2434,8 +2894,8 @@
                             <i class="fa-solid fa-triangle-exclamation"></i>
                         </div>
                         <div>
-                            <h3 class="text-base sm:text-lg font-bold text-slate-900">Public UAUC Report Submission</h3>
-                            <p class="text-xs text-slate-500">Report an Unsafe Act or Unsafe Condition directly from your handphone</p>
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900">Public UAUC & Finding Submission</h3>
+                            <p class="text-xs text-slate-500">Report an Unsafe Act, Unsafe Condition, or Non-Conformance from your handphone</p>
                         </div>
                     </div>
                     <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
@@ -2451,6 +2911,7 @@
                             <select id="uaucCategory" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
                                 <option value="Unsafe Condition">Unsafe Condition (UC)</option>
                                 <option value="Unsafe Act">Unsafe Act (UA)</option>
+                                <option value="Non-Conformance (Unsatisfactory Finding)">Non-Conformance (Unsatisfactory Finding)</option>
                             </select>
                         </div>
                     </div>
@@ -2491,12 +2952,13 @@
                             </select>
                         </div>
                     </div>
-                    ${getPhotoInputHtml("")}
+                    ${getPhotoInputHtml()}
                     <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm shadow-md">
-                        <i class="fa-solid fa-paper-plane mr-1.5"></i> Submit Public UAUC Report
+                        <i class="fa-solid fa-paper-plane mr-1.5"></i> Submit Public Report
                     </button>
                 </form>
             `);
+            renderModalPhotoPreviews();
         }
 
         function saveUauc(e, editIndex) {
@@ -2515,16 +2977,16 @@
                 reporter: reporterInput || (isEdit ? existing.reporter : currentUser.name),
                 risk: document.getElementById('uaucRisk').value,
                 status: document.getElementById('uaucStatus').value,
-                photoName: pendingPhotoFile ? pendingPhotoFile.name : (existing?.photoName || "")
+                photos: [...pendingPhotos]
             };
 
-            pendingPhotoFile = null;
+            pendingPhotos = [];
             if (isEdit) {
                 uaucData[editIndex] = record;
-                showToast("UAUC Report updated!");
+                showToast("Daily Finding / UAUC Report updated!");
             } else {
                 uaucData.unshift(record);
-                showToast("UAUC Report submitted to KLSM Hub!");
+                showToast("Report submitted to KLSM Hub!");
             }
             saveAllData();
             closeModal();
@@ -2538,8 +3000,7 @@
                 showToast("UAUC Report moved to Recovery Vault.");
             });
         }
-
-        // --- ACCIDENT REPORTING LOGIC (WITH PHOTO ATTACHMENT + EDIT/DELETE) ---
+        // --- ACCIDENT REPORTING LOGIC (WITH MULTI-PHOTO ATTACHMENT + EDIT/DELETE) ---
         function renderAccidentTable() {
             const tbody = document.getElementById('accidentTableBody');
             if (!tbody) return;
@@ -2553,7 +3014,7 @@
                     <td class="p-3 text-xs">${item.zone}</td>
                     <td class="p-3 text-slate-700">${item.person}</td>
                     <td class="p-3 text-xs text-slate-500">${item.cause}</td>
-                    <td class="p-3 text-center">${renderPhotoBadge(item.photoName, item.id)}</td>
+                    <td class="p-3 text-center">${renderPhotoBadge(item, item.id)}</td>
                     <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-bold rounded">${item.dosh}</span></td>
                     <td class="p-3 text-right whitespace-nowrap space-x-1">
                         <button onclick="openAccidentModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold">
@@ -2569,7 +3030,6 @@
         }
 
         function openAccidentModal(editIndex = null) {
-            pendingPhotoFile = null;
             const isEdit = editIndex !== null && accidentData[editIndex];
             const item = isEdit ? accidentData[editIndex] : {
                 id: `INC-2026-00${accidentData.length + 4}`,
@@ -2580,8 +3040,9 @@
                 cause: "",
                 dosh: "Pending Review",
                 status: "Open",
-                photoName: ""
+                photos: []
             };
+            initPendingPhotosFromItem(item);
 
             openModal(`
                 <div class="flex justify-between items-center mb-4">
@@ -2622,12 +3083,13 @@
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Root Cause Analysis</label>
                         <textarea id="accCause" required class="w-full p-2 border border-slate-300 rounded-xl text-sm" rows="2">${item.cause}</textarea>
                     </div>
-                    ${getPhotoInputHtml(item.photoName)}
+                    ${getPhotoInputHtml()}
                     <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm">
                         ${isEdit ? 'Update Incident Report' : 'Log Accident Incident'}
                     </button>
                 </form>
             `);
+            renderModalPhotoPreviews();
         }
 
         function saveAccident(e, editIndex) {
@@ -2644,10 +3106,10 @@
                 cause: document.getElementById('accCause').value,
                 dosh: document.getElementById('accDosh').value,
                 status: isEdit ? existing.status : "Open",
-                photoName: pendingPhotoFile ? pendingPhotoFile.name : (existing?.photoName || "")
+                photos: [...pendingPhotos]
             };
 
-            pendingPhotoFile = null;
+            pendingPhotos = [];
             if (isEdit) {
                 accidentData[editIndex] = record;
                 showToast("Accident report updated!");
@@ -2884,6 +3346,30 @@
                             </ul>
                         </div>
 
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Quick Paste (Optional): Paste your <code>firebaseConfig</code> snippet here to auto-fill fields</label>
+                            <textarea id="fbRawSnippet" oninput="autoFillFieldsFromSnippet()" rows="2" placeholder="Paste const firebaseConfig = { ... } here..." class="w-full p-2 border border-slate-300 rounded-xl text-xs font-mono bg-slate-50">${currentJson}</textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">1. apiKey (Required)</label>
+                                <input type="text" id="fbFieldApiKey" value="${cfg.apiKey || ''}" placeholder="AIzaSy..." class="w-full p-2 border border-slate-300 rounded-xl text-xs font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">2. projectId (Required)</label>
+                                <input type="text" id="fbFieldProjectId" value="${cfg.projectId || 'klsm-inspection-hub-v2'}" placeholder="klsm-inspection-hub-v2" class="w-full p-2 border border-slate-300 rounded-xl text-xs font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">3. authDomain</label>
+                                <input type="text" id="fbFieldAuthDomain" value="${cfg.authDomain || 'klsm-inspection-hub-v2.firebaseapp.com'}" class="w-full p-2 border border-slate-300 rounded-xl text-xs font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">4. appId (Optional)</label>
+                                <input type="text" id="fbFieldAppId" value="${cfg.appId || ''}" placeholder="1:123456:web:abcdef" class="w-full p-2 border border-slate-300 rounded-xl text-xs font-mono">
+                            </div>
+                        </div>
+
                         <div class="flex flex-wrap gap-2 justify-between items-center pt-2 border-t border-slate-200">
                             <button type="button" onclick="copyShareableCloudLink()" class="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold rounded-xl text-xs flex items-center gap-1.5" title="Copy a magic link to send via WhatsApp so other phones connect automatically">
                                 <i class="fa-solid fa-share-nodes"></i> Copy Magic Link for Other Phones
@@ -2900,6 +3386,52 @@
                     </div>
                 </div>
             `);
+        }
+
+        function autoFillFieldsFromSnippet() {
+            const raw = document.getElementById('fbRawSnippet')?.value || "";
+            if (!raw.trim()) return;
+            const extract = (key) => {
+                const regex = new RegExp(key + "\\s*:\\s*[\"']([^\"']+)[\"']");
+                const m = raw.match(regex);
+                return m ? m[1].trim() : "";
+            };
+            const apiKey = extract('apiKey');
+            const projectId = extract('projectId');
+            const authDomain = extract('authDomain');
+            const appIdVal = extract('appId');
+
+            if (apiKey && document.getElementById('fbFieldApiKey')) document.getElementById('fbFieldApiKey').value = apiKey;
+            if (projectId && document.getElementById('fbFieldProjectId')) document.getElementById('fbFieldProjectId').value = projectId;
+            if (authDomain && document.getElementById('fbFieldAuthDomain')) document.getElementById('fbFieldAuthDomain').value = authDomain;
+            if (appIdVal && document.getElementById('fbFieldAppId')) document.getElementById('fbFieldAppId').value = appIdVal;
+        }
+
+        function applyCustomFirebaseConfig() {
+            autoFillFieldsFromSnippet();
+            const apiKey = (document.getElementById('fbFieldApiKey')?.value || "").trim();
+            const projectId = (document.getElementById('fbFieldProjectId')?.value || "klsm-inspection-hub-v2").trim();
+            const authDomain = (document.getElementById('fbFieldAuthDomain')?.value || `${projectId}.firebaseapp.com`).trim();
+            const appIdVal = (document.getElementById('fbFieldAppId')?.value || "").trim();
+
+            if (!apiKey || !projectId) {
+                showToast("Please provide at least your apiKey and projectId.");
+                return;
+            }
+
+            const cfg = {
+                apiKey,
+                authDomain,
+                projectId,
+                storageBucket: `${projectId}.firebasestorage.app`,
+                appId: appIdVal
+            };
+
+            localStorage.setItem('klsm_firebase_config', JSON.stringify(cfg));
+            window.__custom_firebase_config = cfg;
+            closeModal();
+            initCloudSync(cfg);
+            showToast("Connecting to Firebase Cloud...");
         }
 
         function copyShareableCloudLink() {
@@ -2925,60 +3457,10 @@
             tempInput.select();
             document.execCommand('copy');
             document.body.removeChild(tempInput);
-
-            showToast("Magic Link copied! Send it via WhatsApp to any handphone to auto-link.");
+            showToast("Copied Magic Auto-Connect Link! Send it to your other devices.");
         }
 
-        function autoFillFieldsFromSnippet() {
-            const raw = document.getElementById('firebaseConfigInput')?.value || "";
-            const extract = (key) => {
-                const regex = new RegExp(key + '\\s*:\\s*["\']([^"\']+)["\']', 'i');
-                const m = raw.match(regex);
-                return m ? m[1].trim() : null;
-            };
-            const apiKey = extract('apiKey');
-            const projectId = extract('projectId');
-            const authDomain = extract('authDomain');
-            const appIdVal = extract('appId');
-
-            if (apiKey) document.getElementById('fbFieldApiKey').value = apiKey;
-            if (projectId) document.getElementById('fbFieldProjectId').value = projectId;
-            if (authDomain) document.getElementById('fbFieldAuthDomain').value = authDomain;
-            if (appIdVal) document.getElementById('fbFieldAppId').value = appIdVal;
-        }
-
-        function applyCustomFirebaseConfig() {
-            // First try auto-extracting from the textarea if the user pasted code there
-            autoFillFieldsFromSnippet();
-
-            const apiKey = (document.getElementById('fbFieldApiKey')?.value || "").trim();
-            const projectId = (document.getElementById('fbFieldProjectId')?.value || "").trim();
-            const authDomain = (document.getElementById('fbFieldAuthDomain')?.value || `${projectId}.firebaseapp.com`).trim();
-            const appIdVal = (document.getElementById('fbFieldAppId')?.value || "").trim();
-
-            if (!apiKey || !projectId) {
-                showToast("Please provide at least your 'apiKey' (starts with AIza...) and 'projectId'!");
-                return;
-            }
-
-            const parsed = {
-                apiKey,
-                authDomain: authDomain || `${projectId}.firebaseapp.com`,
-                projectId,
-                storageBucket: `${projectId}.firebasestorage.app`,
-                appId: appIdVal
-            };
-
-            window.__custom_firebase_config = parsed;
-            try {
-                localStorage.setItem('klsm_firebase_config', JSON.stringify(parsed));
-            } catch (e) {}
-            initCloudSync(parsed);
-            closeModal();
-            showToast(`Connecting to Firebase project: ${projectId}...`);
-        }
-
-        // --- ALERT TABLE & CHARTS ---
+        // --- ALERT TABLE & LIVE CHARTS ---
         function renderAlertTable() {
             const tbody = document.getElementById('expiryAlertTable');
             if (!tbody) return;
@@ -3001,34 +3483,81 @@
             });
         }
 
+        function computeLiveChartData() {
+            // 1. Compute average compliance rate per Zone (Zone 1 .. Zone 9) from actual zoneInspectionLogs
+            const zoneLabels = ZONES_DATA.map((_, i) => `Zone ${i + 1}`);
+            const zoneScores = ZONES_DATA.map((zone) => {
+                const matchingLogs = zoneInspectionLogs.filter(
+                    l => l.zoneId === zone.id || (l.zone && l.zone.startsWith(zone.name.split('–')[0].trim()))
+                );
+                if (matchingLogs.length === 0) return 0;
+                const nums = matchingLogs
+                    .map(l => parseFloat(String(l.score).replace('%', '')))
+                    .filter(n => !isNaN(n));
+                if (nums.length === 0) return 0;
+                return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
+            });
+
+            // 2. Compute exact counts for UAUC & Non-Conformance distribution
+            const unsafeActCount = uaucData.filter(u => u.category === 'Unsafe Act').length;
+            const unsafeCondCount = uaucData.filter(u => u.category === 'Unsafe Condition').length;
+            const nonConfCount = uaucData.filter(u => u.category && u.category.includes('Non-Conformance')).length;
+            const nearMissCount = accidentData.filter(a => a.type === 'Near Miss').length;
+
+            return {
+                zoneLabels,
+                zoneScores,
+                uaucCounts: [unsafeActCount, unsafeCondCount, nonConfCount, nearMissCount]
+            };
+        }
+
         function initCharts() {
-            const ctxZone = document.getElementById('chartZoneCompliance').getContext('2d');
-            new Chart(ctxZone, {
+            const canvasZone = document.getElementById('chartZoneCompliance');
+            const canvasUauc = document.getElementById('chartUaucDistribution');
+            if (!canvasZone || !canvasUauc) return;
+
+            const { zoneLabels, zoneScores, uaucCounts } = computeLiveChartData();
+
+            if (chartZoneInstance) chartZoneInstance.destroy();
+            chartZoneInstance = new Chart(canvasZone.getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: ['Zone 1', 'Zone 2', 'Zone 3', 'Zone 4', 'Zone 5', 'Zone 6', 'Zone 7', 'Zone 8', 'Zone 9'],
+                    labels: zoneLabels,
                     datasets: [{
-                        label: 'Satisfactory Rate (%)',
-                        data: [98, 88, 92, 95, 84, 96, 100, 97, 99],
-                        backgroundColor: '#0284c7',
+                        label: 'Average Compliance Score (%)',
+                        data: zoneScores,
+                        backgroundColor: zoneScores.map(s => s === 0 ? '#cbd5e1' : (s >= 90 ? '#0284c7' : (s >= 75 ? '#f59e0b' : '#e11d48'))),
                         borderRadius: 8
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { y: { min: 60, max: 100 } }
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100,
+                            ticks: { callback: (v) => v + '%' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => ctx.raw === 0 ? 'No Inspection Submitted (0%)' : `Compliance: ${ctx.raw}%`
+                            }
+                        }
+                    }
                 }
             });
 
-            const ctxUauc = document.getElementById('chartUaucDistribution').getContext('2d');
-            new Chart(ctxUauc, {
+            if (chartUaucInstance) chartUaucInstance.destroy();
+            chartUaucInstance = new Chart(canvasUauc.getContext('2d'), {
                 type: 'doughnut',
                 data: {
-                    labels: ['Unsafe Act', 'Unsafe Condition', 'Near Miss'],
+                    labels: ['Unsafe Act (UA)', 'Unsafe Condition (UC)', 'Non-Conformance Finding', 'Near Miss'],
                     datasets: [{
-                        data: [7, 4, 1],
-                        backgroundColor: ['#f59e0b', '#6366f1', '#f43f5e']
+                        data: uaucCounts,
+                        backgroundColor: ['#f59e0b', '#6366f1', '#e11d48', '#10b981']
                     }]
                 },
                 options: {
@@ -3036,6 +3565,20 @@
                     maintainAspectRatio: false
                 }
             });
+        }
+
+        function updateCharts() {
+            if (!chartZoneInstance || !chartUaucInstance) return;
+            const { zoneScores, uaucCounts } = computeLiveChartData();
+
+            chartZoneInstance.data.datasets[0].data = zoneScores;
+            chartZoneInstance.data.datasets[0].backgroundColor = zoneScores.map(
+                s => s === 0 ? '#cbd5e1' : (s >= 90 ? '#0284c7' : (s >= 75 ? '#f59e0b' : '#e11d48'))
+            );
+            chartZoneInstance.update();
+
+            chartUaucInstance.data.datasets[0].data = uaucCounts;
+            chartUaucInstance.update();
         }
 
         function exportDataReport() {
@@ -3139,6 +3682,7 @@
             switchTab,
             startZoneInspection,
             submitZoneInspection,
+            viewZoneInspectionDetail,
             deleteZoneLog,
             switchFireSubCategory,
             filterExtinguishers,
@@ -3146,12 +3690,14 @@
             saveFireExtinguisher,
             deleteFireExtinguisher,
             openFirePumpModal,
+            togglePumpModalCriteriaFields,
             saveFirePump,
             deleteFirePump,
             renderCarParTable,
             openCarParModal,
             saveCarPar,
             deleteCarPar,
+            renderUaucTable,
             openUaucModal,
             openPublicUaucModal,
             saveUauc,
@@ -3175,7 +3721,8 @@
             openModal,
             closeModal,
             handlePhotoSelect,
-            viewAttachedPhoto,
+            removePendingPhoto,
+            viewAttachedPhotosModal,
             generateCaptchaCanvas,
             confirmSecureDelete,
             updateSecuritySettings,
