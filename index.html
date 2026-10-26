@@ -1032,6 +1032,12 @@
                 if (!rawConfig && window.__custom_firebase_config) {
                     rawConfig = window.__custom_firebase_config;
                 }
+                if (!rawConfig) {
+                    const savedLocalConfig = localStorage.getItem('klsm_firebase_config');
+                    if (savedLocalConfig) {
+                        try { rawConfig = JSON.parse(savedLocalConfig); } catch (e) {}
+                    }
+                }
 
                 if (!rawConfig || !rawConfig.apiKey || !rawConfig.projectId) {
                     document.getElementById('cloudStatusText').textContent = "Setup Cloud Link";
@@ -2822,17 +2828,34 @@
         function applyCustomFirebaseConfig() {
             const rawText = document.getElementById('firebaseConfigInput')?.value || "";
             try {
-                const cleaned = rawText
+                // Allow pasting raw JS object from Firebase Console (even without quotes around keys)
+                let cleaned = rawText
+                    .replace(/\/\/.*$/gm, '') // remove single-line comments
                     .replace(/const\s+firebaseConfig\s*=\s*/, '')
                     .replace(/;$/, '')
                     .trim();
+
+                // Extract only the {...} block if the user pasted the entire <script> snippet
+                const match = cleaned.match(/\{[\s\S]*\}/);
+                if (match) {
+                    cleaned = match[0];
+                }
+
+                // Quote unquoted JavaScript keys (e.g. apiKey: "..." -> "apiKey": "...")
+                cleaned = cleaned.replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+                // Remove trailing commas before closing brace
+                cleaned = cleaned.replace(/,\s*\}/g, '}');
+
                 const parsed = JSON.parse(cleaned);
                 window.__custom_firebase_config = parsed;
+                try {
+                    localStorage.setItem('klsm_firebase_config', JSON.stringify(parsed));
+                } catch (e) {}
                 initCloudSync(parsed);
                 closeModal();
                 showToast("Connected to your Firebase Cloud project!");
             } catch (err) {
-                showToast("Invalid JSON format. Make sure keys are in double quotes.");
+                showToast("Could not parse config. Copy everything from { to } in firebaseConfig.");
             }
         }
 
@@ -3044,6 +3067,10 @@
             if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' });
             refreshAllViews();
             initCharts();
+            try {
+                const savedCfg = localStorage.getItem('klsm_firebase_config');
+                if (savedCfg) window.__custom_firebase_config = JSON.parse(savedCfg);
+            } catch (e) {}
             initCloudSync();
         });
     </script>
