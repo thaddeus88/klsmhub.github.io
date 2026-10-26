@@ -67,42 +67,97 @@
     <div id="app" class="min-h-screen flex flex-col">
 
         <!-- 1. LOGIN SCREEN -->
-        <section id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900">
-            <div class="max-w-md w-full bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-white/20">
-                <div class="text-center mb-8">
-                    <div class="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-500/30 text-white text-2xl font-bold">
-                        <i class="fa-solid fa-clipboard-check"></i>
+        <section id="loginScreen" class="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900">
+            <div class="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                <!-- Left: Sign In Card -->
+                <div class="lg:col-span-5 bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-white/20 flex flex-col justify-between">
+                    <div>
+                        <div class="text-center mb-8">
+                            <div class="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-500/30 text-white text-2xl font-bold">
+                                <i class="fa-solid fa-clipboard-check"></i>
+                            </div>
+                            <h1 class="text-2xl font-bold text-slate-900">KLSM Inspection Hub</h1>
+                            <p class="text-slate-500 text-sm mt-1">Health, Safety & Environment Management</p>
+                        </div>
+
+                        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5">
+                            <!-- Invisible Bot Honeypot -->
+                            <input type="text" id="loginBotHoneypot" class="hidden" tabindex="-1" autocomplete="off">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Select Role</label>
+                                <select id="loginRole" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white transition">
+                                    <option value="Inspector">Safety Inspector / Personnel</option>
+                                    <option value="Admin">HSE Manager / Admin</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Username / ID</label>
+                                <input type="text" id="loginUsername" required value="inspector_klsm" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition" placeholder="Enter employee ID">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                                <input type="password" required value="••••••••" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition" placeholder="Password">
+                            </div>
+                            <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-lg shadow-brand-600/30 transition duration-200">
+                                Sign In to Hub
+                            </button>
+                        </form>
                     </div>
-                    <h1 class="text-2xl font-bold text-slate-900">KLSM Inspection Hub</h1>
-                    <p class="text-slate-500 text-sm mt-1">Health, Safety & Environment Management</p>
+
+                    <div class="mt-6 pt-6 border-t border-slate-200 flex flex-col items-center gap-3 text-center text-xs text-slate-400">
+                        <span>KLSM Palm Oil Mill Safety Portal &bull; Version 2.5</span>
+                        <button type="button" onclick="openPublishGuideModal()" class="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-2 text-xs">
+                            <i class="fa-brands fa-github text-base"></i> GitHub Publish & Troubleshooting Guide
+                        </button>
+                    </div>
                 </div>
 
-                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5">
+                <!-- Right: Pending CAR/PAR Summary List -->
+                <div class="lg:col-span-7 bg-white/95 backdrop-blur-md p-6 sm:p-8 rounded-2xl shadow-2xl border border-white/20 flex flex-col justify-between">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Select Role</label>
-                        <select id="loginRole" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white transition">
-                            <option value="Inspector">Safety Inspector / Personnel</option>
-                            <option value="Admin">HSE Manager / Admin</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Username / ID</label>
-                        <input type="text" id="loginUsername" required value="inspector_klsm" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition" placeholder="Enter employee ID">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
-                        <input type="password" required value="••••••••" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition" placeholder="Password">
-                    </div>
-                    <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-lg shadow-brand-600/30 transition duration-200">
-                        Sign In to Hub
-                    </button>
-                </form>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+                            <div class="flex items-center gap-3">
+                                <div class="w-11 h-11 bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                                    <i class="fa-solid fa-list-check"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-lg font-bold text-slate-900">Pending CAR / PAR Summary</h2>
+                                    <p class="text-xs text-slate-500">Active Corrective & Preventive Action Requests requiring follow-up</p>
+                                </div>
+                            </div>
+                            <span id="loginPendingCountBadge" class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full self-start sm:self-center">0 Pending</span>
+                        </div>
 
-                <div class="mt-6 pt-6 border-t border-slate-200 flex flex-col items-center gap-3 text-center text-xs text-slate-400">
-                    <span>2026 KLSMHSE &bull; ThadYap &bull; Version 2.5</span>
-                    <button type="button" onclick="openPublishGuideModal()" class="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-2 text-xs">
-                        <i class="fa-brands fa-github text-base"></i> GitHub Publish & Troubleshooting Guide
-                    </button>
+                        <!-- Summary Status Counters -->
+                        <div class="grid grid-cols-2 gap-3 my-4">
+                            <div class="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 flex items-center justify-between">
+                                <div>
+                                    <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-700 block">Open Issues</span>
+                                    <span id="loginCarOpenCount" class="text-xl font-bold text-amber-900">0</span>
+                                </div>
+                                <i class="fa-solid fa-circle-exclamation text-amber-500 text-lg"></i>
+                            </div>
+                            <div class="p-3 rounded-xl bg-blue-50/80 border border-blue-200/80 flex items-center justify-between">
+                                <div>
+                                    <span class="text-[11px] font-semibold uppercase tracking-wider text-blue-700 block">In Progress</span>
+                                    <span id="loginCarProgressCount" class="text-xl font-bold text-blue-900">0</span>
+                                </div>
+                                <i class="fa-solid fa-clock-rotate-left text-blue-500 text-lg"></i>
+                            </div>
+                        </div>
+
+                        <!-- Scrollable Pending Items Container -->
+                        <div id="loginPendingCarParList" class="space-y-3 max-h-[320px] overflow-y-auto custom-scrollbar pr-1">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-400">
+                        <span><i class="fa-solid fa-circle-info text-brand-600 mr-1"></i> Sign in to update CAR/PAR status or attach photo evidence</span>
+                        <span class="text-emerald-600 font-semibold flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Live Summary
+                        </span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -126,6 +181,14 @@
 
                         <!-- User Profile & Navigation -->
                         <div class="flex items-center space-x-2 sm:space-x-4">
+                            <div id="securityShieldBadge" class="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold rounded-xl hidden sm:flex items-center gap-1.5" title="Anti-Bot CAPTCHA & PIN Protection Active">
+                                <i class="fa-solid fa-lock text-indigo-600"></i>
+                                <span>Anti-Bot Delete Guard</span>
+                            </div>
+                            <div id="cloudStatusBadge" class="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span id="cloudStatusText">Multi-User Sync</span>
+                            </div>
                             <button onclick="openPublishGuideModal()" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-sm" title="How to Publish to GitHub">
                                 <i class="fa-brands fa-github text-sm"></i>
                                 <span class="hidden md:inline">Publish Guide</span>
@@ -133,6 +196,7 @@
                             <div class="text-right hidden sm:block">
                                 <p id="navUserName" class="text-sm font-semibold text-slate-800">John Doe</p>
                                 <p id="navUserRole" class="text-xs text-brand-600 font-medium">Safety Inspector</p>
+                                <p id="navUserId" class="text-[10px] text-slate-400 font-mono">UID: connecting...</p>
                             </div>
                             <button onclick="handleLogout()" class="p-2 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition" title="Logout">
                                 <i class="fa-solid fa-right-from-bracket text-lg"></i>
@@ -266,6 +330,7 @@
                                     <tr>
                                         <th class="p-4">Serial No.</th>
                                         <th class="p-4">Type</th>
+                                        <th class="p-4">Mfg Year</th>
                                         <th class="p-4">Location Zone</th>
                                         <th class="p-4">Expiry Date</th>
                                         <th class="p-4">Status</th>
@@ -285,7 +350,7 @@
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
                         <div>
                             <h2 class="text-xl font-bold text-slate-900">KLSM Mill Zones Checklist</h2>
-                            <p class="text-sm text-slate-500">Select an assigned zone to conduct physical inspection and log safety scores.</p>
+                            <p class="text-sm text-slate-500">Select an assigned zone to conduct physical inspection, attach photos, and log safety scores.</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-xs bg-brand-50 text-brand-700 px-3 py-1.5 rounded-xl font-medium border border-brand-200">
@@ -298,6 +363,34 @@
                     <div id="zonesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <!-- Populated by JavaScript with 9 specific zones -->
                     </div>
+
+                    <!-- Completed Zone Inspection Logs (with Photo Attachments) -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-slate-200 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-slate-900">Recent Zone Inspection Submissions</h3>
+                                <p class="text-xs text-slate-500">Submitted zone checklists with inspector notes and attached evidence photos</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-100 text-slate-700 font-semibold">
+                                    <tr>
+                                        <th class="p-3">Date</th>
+                                        <th class="p-3">Zone</th>
+                                        <th class="p-3">Inspector</th>
+                                        <th class="p-3">Compliance Score</th>
+                                        <th class="p-3">Remarks</th>
+                                        <th class="p-3 text-center">Photo</th>
+                                        <th class="p-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="zoneLogsTableBody" class="divide-y divide-slate-200 bg-white">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- 3. FIRE FIGHTING EQUIPMENT CHECKLIST -->
@@ -308,9 +401,14 @@
                                 <h2 class="text-xl font-bold text-slate-900">Fire Fighting Equipment Checklist</h2>
                                 <p class="text-sm text-slate-500">Routine safety verification for Extinguishers, Hose Reels, Hydrants & Pumps.</p>
                             </div>
-                            <button onclick="openAddFireEquipmentModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
-                                <i class="fa-solid fa-plus"></i> Add Equipment Record
-                            </button>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="openFireExtinguisherModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
+                                    <i class="fa-solid fa-fire-extinguisher"></i> + Add Extinguisher
+                                </button>
+                                <button onclick="openFirePumpModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
+                                    <i class="fa-solid fa-faucet-drip"></i> + Add Hose Reel / Hydrant
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Sub-Category Tabs -->
@@ -326,7 +424,7 @@
                         <!-- Extinguisher Content -->
                         <div id="fireSub-extinguishers" class="space-y-4">
                             <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
-                                <input type="text" id="searchExtinguisher" oninput="filterExtinguishers()" placeholder="Search by Serial No. or Zone..." class="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm w-full max-w-xs focus:ring-2 focus:ring-brand-500">
+                                <input type="text" id="searchExtinguisher" oninput="filterExtinguishers()" placeholder="Search by Serial No., Mfg Year, or Zone..." class="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm w-full max-w-xs focus:ring-2 focus:ring-brand-500">
                                 <div class="text-xs text-slate-500">Showing <span id="extinguisherCount" class="font-bold text-slate-800">0</span> units</div>
                             </div>
                             <div class="overflow-x-auto rounded-xl border border-slate-200">
@@ -336,11 +434,12 @@
                                             <th class="p-3">ID / Serial</th>
                                             <th class="p-3">Type</th>
                                             <th class="p-3">Capacity</th>
+                                            <th class="p-3">Mfg Year</th>
                                             <th class="p-3">Zone Location</th>
-                                            <th class="p-3">Pressure Indicator</th>
+                                            <th class="p-3">Pressure</th>
                                             <th class="p-3">Expiry Date</th>
                                             <th class="p-3 text-center">Status</th>
-                                            <th class="p-3 text-right">Inspect</th>
+                                            <th class="p-3 text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="extinguisherTableBody" class="divide-y divide-slate-200 bg-white">
@@ -362,7 +461,7 @@
                                     </div>
                                 </div>
                                 <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                    <h4 class="font-bold text-slate-800 flex items-center gap-2 mb-2"><i class="fa-solid fa-engine text-amber-600"></i> Diesel Engine Pump</h4>
+                                    <h4 class="font-bold text-slate-800 flex items-center gap-2 mb-2"><i class="fa-solid fa-gas-pump text-amber-600"></i> Diesel Engine Pump</h4>
                                     <p class="text-xs text-slate-500">Auto Starting & Fuel Reserve</p>
                                     <div class="mt-3 flex justify-between items-center">
                                         <span class="text-2xl font-bold text-slate-900">95% Fuel</span>
@@ -371,10 +470,10 @@
                                 </div>
                                 <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
                                     <h4 class="font-bold text-slate-800 flex items-center gap-2 mb-2"><i class="fa-solid fa-ring text-indigo-600"></i> Hydrant Ring Main</h4>
-                                    <p class="text-xs text-slate-500">No. of Active Hydrant Pillars</p>
+                                    <p class="text-xs text-slate-500">Hose, Coupling, Nozzle, Box & Valve</p>
                                     <div class="mt-3 flex justify-between items-center">
-                                        <span class="text-2xl font-bold text-slate-900">18 Units</span>
-                                        <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">Tested OK</span>
+                                        <span id="pumpTotalCount" class="text-2xl font-bold text-slate-900">3 Units</span>
+                                        <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">Monitored</span>
                                     </div>
                                 </div>
                             </div>
@@ -385,11 +484,14 @@
                                         <tr>
                                             <th class="p-3">Equipment Item</th>
                                             <th class="p-3">Zone / Location</th>
-                                            <th class="p-3">Condition / No Leakage</th>
-                                            <th class="p-3">Hose Reel Nozzle</th>
-                                            <th class="p-3">Last Test Date</th>
+                                            <th class="p-3">Hose Condition</th>
+                                            <th class="p-3">Coupling</th>
+                                            <th class="p-3">Nozzle</th>
+                                            <th class="p-3">Fire Hydrant Box</th>
+                                            <th class="p-3">Valve</th>
+                                            <th class="p-3">Last Test</th>
                                             <th class="p-3 text-center">Status</th>
-                                            <th class="p-3 text-right">Log Test</th>
+                                            <th class="p-3 text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="pumpTableBody" class="divide-y divide-slate-200 bg-white">
@@ -408,9 +510,9 @@
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <div>
                                 <h2 class="text-xl font-bold text-slate-900">CAR / PAR Register</h2>
-                                <p class="text-sm text-slate-500">Corrective Action Request (CAR) & Preventive Action Request (PAR) Tracking.</p>
+                                <p class="text-sm text-slate-500">Corrective Action Request (CAR) & Preventive Action Request (PAR) Tracking with Photo Attachments.</p>
                             </div>
-                            <button onclick="openAddCarParModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
+                            <button onclick="openCarParModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
                                 <i class="fa-solid fa-plus"></i> New CAR/PAR Issue
                             </button>
                         </div>
@@ -440,6 +542,7 @@
                                         <th class="p-3">Finding Description</th>
                                         <th class="p-3">Person In-Charge</th>
                                         <th class="p-3">Target Date</th>
+                                        <th class="p-3 text-center">Photo</th>
                                         <th class="p-3 text-center">Status</th>
                                         <th class="p-3 text-right">Actions</th>
                                     </tr>
@@ -458,9 +561,9 @@
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <div>
                                 <h2 class="text-xl font-bold text-slate-900">Daily Findings & UAUC Reports</h2>
-                                <p class="text-sm text-slate-500">Unsafe Act & Unsafe Condition observations and unsatisfactory findings.</p>
+                                <p class="text-sm text-slate-500">Unsafe Act & Unsafe Condition observations and unsatisfactory findings with photo evidence.</p>
                             </div>
-                            <button onclick="openAddUaucModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
+                            <button onclick="openUaucModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
                                 <i class="fa-solid fa-triangle-exclamation"></i> Log UAUC Report
                             </button>
                         </div>
@@ -475,8 +578,10 @@
                                         <th class="p-3">Observed Condition / Act</th>
                                         <th class="p-3">Immediate Action Taken</th>
                                         <th class="p-3">Reporter</th>
+                                        <th class="p-3 text-center">Photo</th>
                                         <th class="p-3 text-center">Risk Level</th>
-                                        <th class="p-3 text-right">Status</th>
+                                        <th class="p-3 text-center">Status</th>
+                                        <th class="p-3 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="uaucTableBody" class="divide-y divide-slate-200 bg-white">
@@ -493,9 +598,9 @@
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <div>
                                 <h2 class="text-xl font-bold text-slate-900">Accident & Incident Register</h2>
-                                <p class="text-sm text-slate-500">Official log for Near-Miss, Lost Time Injuries (LTI), and Medical Treatment Cases.</p>
+                                <p class="text-sm text-slate-500">Official log for Near-Miss, Lost Time Injuries (LTI), and Medical Treatment Cases with photo evidence.</p>
                             </div>
-                            <button onclick="openAddAccidentModal()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
+                            <button onclick="openAccidentModal()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-sm">
                                 <i class="fa-solid fa-square-plus"></i> Report New Incident
                             </button>
                         </div>
@@ -510,7 +615,8 @@
                                         <th class="p-3">Zone</th>
                                         <th class="p-3">Injured Person / Description</th>
                                         <th class="p-3">Root Cause</th>
-                                        <th class="p-3 text-center">DOSH Report Status</th>
+                                        <th class="p-3 text-center">Photo</th>
+                                        <th class="p-3 text-center">DOSH Status</th>
                                         <th class="p-3 text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -583,6 +689,45 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Anti-Bot Security Settings & Deleted Data Recovery Vault -->
+                        <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div class="border border-indigo-200 rounded-xl p-4 bg-indigo-50/50 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                        <i class="fa-solid fa-user-shield text-indigo-600"></i> Deletion Security Settings
+                                    </h3>
+                                    <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">Protected</span>
+                                </div>
+                                <p class="text-xs text-slate-500">Prevent bots and unauthorized users from deleting inspection records.</p>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Authorization Delete PIN</label>
+                                    <div class="flex gap-2">
+                                        <input type="password" id="adminSecurityPinInput" value="1234" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white" placeholder="Set 4-digit PIN">
+                                        <button onclick="updateSecuritySettings()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg whitespace-nowrap">Save PIN</button>
+                                    </div>
+                                </div>
+                                <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 pt-1 cursor-pointer">
+                                    <input type="checkbox" id="adminOnlyDeleteToggle" onchange="updateSecuritySettings()" class="rounded text-indigo-600">
+                                    <span>Restrict Deletions to Admin Role Only</span>
+                                </label>
+                            </div>
+
+                            <div class="lg:col-span-2 border border-slate-200 rounded-xl p-4 bg-slate-50">
+                                <div class="flex justify-between items-center mb-2">
+                                    <div>
+                                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                                            <i class="fa-solid fa-trash-can-arrow-up text-emerald-600"></i> Deleted Data Recovery Vault (Soft-Delete Backup)
+                                        </h3>
+                                        <p class="text-xs text-slate-500">Any deleted record is safely archived here so you can restore it with 1 click.</p>
+                                    </div>
+                                    <span id="recycleBinCount" class="px-2.5 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-full">0 Archived</span>
+                                </div>
+                                <div id="recycleBinList" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar bg-white p-3 rounded-xl border border-slate-200">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -591,7 +736,11 @@
     </div>
 
     <!-- SCRIPT APPLICATION LOGIC -->
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         // --- DATA STORE ---
         const ZONES_DATA = [
             {
@@ -689,31 +838,35 @@
         ];
 
         let fireExtinguishers = [
-            { id: "PFE-Z1-01", type: "Dry Powder", capacity: "9.0 kg", zone: "Zone 1 – Laboratory", pressure: "Good", expiry: "2026-11-15", status: "OK" },
-            { id: "PFE-Z3-04", type: "CO2", capacity: "5.0 kg", zone: "Zone 3 – Boiler Room", pressure: "Good", expiry: "2026-10-30", status: "EXPIRED_SOON" },
-            { id: "PFE-Z2-02", type: "Foam", capacity: "9.0 L", zone: "Zone 2 – Workshop", pressure: "Low", expiry: "2027-01-20", status: "DEFECT" },
-            { id: "PFE-Z4-08", type: "Dry Powder", capacity: "9.0 kg", zone: "Zone 4 – Biogas Plant", pressure: "Good", expiry: "2026-11-02", status: "EXPIRED_SOON" }
+            { id: "PFE-Z1-01", type: "Dry Powder", capacity: "9.0 kg", mfgYear: "2022", zone: "Zone 1 – Laboratory", pressure: "Good", expiry: "2026-11-15", status: "OK" },
+            { id: "PFE-Z3-04", type: "CO2", capacity: "5.0 kg", mfgYear: "2020", zone: "Zone 3 – Boiler Room", pressure: "Good", expiry: "2026-10-30", status: "EXPIRED_SOON" },
+            { id: "PFE-Z2-02", type: "Foam", capacity: "9.0 L", mfgYear: "2021", zone: "Zone 2 – Workshop", pressure: "Low", expiry: "2027-01-20", status: "DEFECT" },
+            { id: "PFE-Z4-08", type: "Dry Powder", capacity: "9.0 kg", mfgYear: "2023", zone: "Zone 4 – Biogas Plant", pressure: "Good", expiry: "2026-11-02", status: "EXPIRED_SOON" }
         ];
 
         let firePumps = [
-            { name: "Hose Reel #01", location: "Zone 5 - Production", condition: "Good", nozzle: "Functional", lastTest: "2026-10-10", status: "PASS" },
-            { name: "Yard Hydrant Pillar #04", location: "Zone 6 - Store", condition: "Minor Rust", nozzle: "Functional", lastTest: "2026-10-12", status: "PASS" },
-            { name: "Electric Fire Pump #01", location: "Pump House", condition: "Good", nozzle: "N/A", lastTest: "2026-10-20", status: "PASS" }
+            { id: "HRP-01", name: "Hose Reel #01", location: "Zone 5 – Production Area", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Good", valve: "Operational", lastTest: "2026-10-10", status: "PASS" },
+            { id: "HRP-02", name: "Yard Hydrant Pillar #04", location: "Zone 6 – Store & Diesel Skid Tank", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Minor Rust", valve: "Operational", lastTest: "2026-10-12", status: "PASS" },
+            { id: "HRP-03", name: "Main Hydrant & Pump #01", location: "Zone 3 – Boiler, Engine Room & RO Water Treatment", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Good", valve: "Operational", lastTest: "2026-10-20", status: "PASS" }
         ];
 
         let carParData = [
-            { ref: "CAR-2026-089", type: "CAR", zone: "Zone 3 – Boiler", finding: "Steam leakage at valve flange #3", pic: "Ahmad (Boiler Ops)", target: "2026-10-28", status: "OPEN" },
-            { ref: "PAR-2026-012", type: "PAR", zone: "Zone 2 – Workshop", finding: "Install secondary safety guard for grinding wheel", pic: "Maniam (Fitter)", target: "2026-11-05", status: "IN_PROGRESS" },
-            { ref: "CAR-2026-074", type: "CAR", zone: "Zone 1 – Lab", finding: "Eyewash station pressure low", pic: "Siti (Lab Tech)", target: "2026-10-15", status: "CLOSED" }
+            { ref: "CAR-2026-089", type: "CAR", zone: "Zone 3 – Boiler, Engine Room & RO Water Treatment", finding: "Steam leakage at valve flange #3", pic: "Ahmad (Boiler Ops)", target: "2026-10-28", status: "OPEN", photoName: "" },
+            { ref: "PAR-2026-012", type: "PAR", zone: "Zone 2 – Workshop", finding: "Install secondary safety guard for grinding wheel", pic: "Maniam (Fitter)", target: "2026-11-05", status: "IN_PROGRESS", photoName: "" },
+            { ref: "CAR-2026-074", type: "CAR", zone: "Zone 1 – Laboratory, CPO Despatch, Oil Storage Tank & FFB Grading", finding: "Eyewash station pressure low", pic: "Siti (Lab Tech)", target: "2026-10-15", status: "CLOSED", photoName: "" }
         ];
 
         let uaucData = [
-            { date: "2026-10-22", category: "Unsafe Act", zone: "Zone 2 – Workshop", observation: "Worker grinding metal without face shield", immediateAction: "Work stopped, PPE provided immediately", reporter: "John Doe", risk: "HIGH", status: "Closed" },
-            { date: "2026-10-21", category: "Unsafe Condition", zone: "Zone 5 – Production Area", observation: "Oil slick near press station #2", immediateAction: "Sawdust applied and area cordoned off", reporter: "Safety Inspector", risk: "MEDIUM", status: "In Progress" }
+            { id: "UAUC-101", date: "2026-10-22", category: "Unsafe Act", zone: "Zone 2 – Workshop", observation: "Worker grinding metal without face shield", immediateAction: "Work stopped, PPE provided immediately", reporter: "John Doe", risk: "HIGH", status: "Closed", photoName: "" },
+            { id: "UAUC-102", date: "2026-10-21", category: "Unsafe Condition", zone: "Zone 5 – Production Area", observation: "Oil slick near press station #2", immediateAction: "Sawdust applied and area cordoned off", reporter: "Safety Inspector", risk: "MEDIUM", status: "In Progress", photoName: "" }
         ];
 
         let accidentData = [
-            { id: "INC-2026-003", datetime: "2026-10-18 14:30", type: "First Aid Case", zone: "Zone 2 – Workshop", person: "Lee K. (Technician)", cause: "Minor cut on thumb during maintenance", dosh: "Not Required", status: "Closed" }
+            { id: "INC-2026-003", datetime: "2026-10-18 14:30", type: "First Aid Case", zone: "Zone 2 – Workshop", person: "Lee K. (Technician)", cause: "Minor cut on thumb during maintenance", dosh: "Not Required", status: "Closed", photoName: "" }
+        ];
+
+        let zoneInspectionLogs = [
+            { id: "ZLOG-01", date: "2026-10-25", zone: "Zone 1 – Laboratory, CPO Despatch, Oil Storage Tank & FFB Grading", inspector: "John Doe", score: "100%", remarks: "All parameters satisfactory.", photoName: "" }
         ];
 
         let personnelData = [
@@ -722,64 +875,457 @@
             { name: "Siti Nurhaliza", role: "Chemist", dept: "Laboratory" }
         ];
 
+        // --- ANTI-BOT & DELETION SECURITY STATE ---
+        let securityConfig = {
+            deletePin: "1234",
+            adminOnlyDelete: false
+        };
+        let recycleBinData = [];
+        let activeCaptchaCode = "";
+        let pendingDeleteAction = null;
+        let deleteAttemptTimestamps = [];
+        let botLockoutUntil = 0;
+
+        // Session Object URL cache for attached photos
+        const photoPreviewCache = {};
+        let pendingPhotoFile = null;
+
         let currentUser = { name: "John Doe", role: "Inspector" };
+        let db = null;
+        let auth = null;
+        let currentUserUid = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'klsm-inspection-hub';
 
-        // --- LOCAL STORAGE PERSISTENCE ---
-        function loadSavedData() {
+        // --- CLOUD FIRESTORE INITIALIZATION (MULTI-USER) ---
+        async function initCloudSync() {
             try {
-                const savedZones = localStorage.getItem('klsm_zones');
-                const savedFe = localStorage.getItem('klsm_fe');
-                const savedCar = localStorage.getItem('klsm_car');
-                const savedUauc = localStorage.getItem('klsm_uauc');
-                const savedAcc = localStorage.getItem('klsm_acc');
-                const savedStaff = localStorage.getItem('klsm_staff');
-
-                if (savedZones) {
-                    const parsed = JSON.parse(savedZones);
-                    parsed.forEach((z, i) => { if (ZONES_DATA[i]) ZONES_DATA[i].parameters = z.parameters; });
+                if (typeof __firebase_config === 'undefined' || !__firebase_config) {
+                    document.getElementById('cloudStatusText').textContent = "Session Mode";
+                    document.getElementById('navUserId').textContent = "UID: local-session";
+                    return;
                 }
-                if (savedFe) fireExtinguishers = JSON.parse(savedFe);
-                if (savedCar) carParData = JSON.parse(savedCar);
-                if (savedUauc) uaucData = JSON.parse(savedUauc);
-                if (savedAcc) accidentData = JSON.parse(savedAcc);
-                if (savedStaff) personnelData = JSON.parse(savedStaff);
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // RULE 3: Authenticate FIRST before any Firestore query
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                currentUserUid = auth.currentUser?.uid || crypto.randomUUID();
+                document.getElementById('navUserId').textContent = `UID: ${currentUserUid}`;
+                document.getElementById('cloudStatusText').textContent = "Live Cloud Sync";
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserUid = user.uid;
+                        document.getElementById('navUserId').textContent = `UID: ${currentUserUid}`;
+                    }
+                });
+
+                // RULE 1: Strict public path for multi-user collaboration
+                const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master');
+
+                onSnapshot(stateDocRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.data();
+                        if (data.zones) {
+                            const parsedZones = JSON.parse(data.zones);
+                            parsedZones.forEach((z, i) => { if (ZONES_DATA[i]) ZONES_DATA[i].parameters = z.parameters; });
+                        }
+                        if (data.fireExtinguishers) fireExtinguishers = JSON.parse(data.fireExtinguishers);
+                        if (data.firePumps) firePumps = JSON.parse(data.firePumps);
+                        if (data.carParData) carParData = JSON.parse(data.carParData);
+                        if (data.uaucData) uaucData = JSON.parse(data.uaucData);
+                        if (data.accidentData) accidentData = JSON.parse(data.accidentData);
+                        if (data.zoneInspectionLogs) zoneInspectionLogs = JSON.parse(data.zoneInspectionLogs);
+                        if (data.personnelData) personnelData = JSON.parse(data.personnelData);
+                        if (data.securityConfig) securityConfig = JSON.parse(data.securityConfig);
+                        if (data.recycleBinData) recycleBinData = JSON.parse(data.recycleBinData);
+                        refreshAllViews();
+                    } else {
+                        saveAllData();
+                    }
+                }, (error) => {
+                    console.warn("Firestore listener error:", error);
+                });
             } catch (err) {
-                console.warn("Could not load saved state from localStorage:", err);
+                console.warn("Cloud initialization fallback:", err);
             }
         }
 
-        function saveAllData() {
+        async function saveAllData() {
+            refreshAllViews();
+            if (!db || !currentUserUid) return;
             try {
-                localStorage.setItem('klsm_zones', JSON.stringify(ZONES_DATA));
-                localStorage.setItem('klsm_fe', JSON.stringify(fireExtinguishers));
-                localStorage.setItem('klsm_car', JSON.stringify(carParData));
-                localStorage.setItem('klsm_uauc', JSON.stringify(uaucData));
-                localStorage.setItem('klsm_acc', JSON.stringify(accidentData));
-                localStorage.setItem('klsm_staff', JSON.stringify(personnelData));
+                const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master');
+                await setDoc(stateDocRef, {
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: currentUserUid,
+                    zones: JSON.stringify(ZONES_DATA),
+                    fireExtinguishers: JSON.stringify(fireExtinguishers),
+                    firePumps: JSON.stringify(firePumps),
+                    carParData: JSON.stringify(carParData),
+                    uaucData: JSON.stringify(uaucData),
+                    accidentData: JSON.stringify(accidentData),
+                    zoneInspectionLogs: JSON.stringify(zoneInspectionLogs),
+                    personnelData: JSON.stringify(personnelData),
+                    securityConfig: JSON.stringify(securityConfig),
+                    recycleBinData: JSON.stringify(recycleBinData)
+                });
             } catch (err) {
-                console.warn("Could not save state to localStorage:", err);
+                console.warn("Could not sync state to cloud:", err);
             }
         }
 
-        // --- INIT APP ---
-        document.addEventListener("DOMContentLoaded", () => {
-            loadSavedData();
-            document.getElementById('currentInspectionDate').textContent = new Date().toISOString().split('T')[0];
+        function refreshAllViews() {
             renderZonesGrid();
+            renderZoneLogsTable();
             renderExtinguishersTable();
             renderPumpTable();
             renderCarParTable();
+            renderLoginPendingCarPar();
             renderUaucTable();
             renderAccidentTable();
             renderAdminZoneOptions();
             renderPersonnelList();
-            initCharts();
             renderAlertTable();
+            renderRecycleBin();
+            syncSecurityInputs();
+            updateAnalyticsCounters();
+        }
+
+        // --- ANTI-BOT CAPTCHA, SECURE DELETE & RECOVERY VAULT FUNCTIONS ---
+        function syncSecurityInputs() {
+            const pinInput = document.getElementById('adminSecurityPinInput');
+            const toggleInput = document.getElementById('adminOnlyDeleteToggle');
+            if (pinInput && securityConfig.deletePin) pinInput.value = securityConfig.deletePin;
+            if (toggleInput) toggleInput.checked = Boolean(securityConfig.adminOnlyDelete);
+        }
+
+        function generateCaptchaCanvas() {
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            let code = "";
+            for (let i = 0; i < 5; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            activeCaptchaCode = code;
+
+            const canvas = document.getElementById('captchaCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Background
+            ctx.fillStyle = "#f8fafc";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Noise lines
+            for (let i = 0; i < 6; i++) {
+                ctx.strokeStyle = `rgba(100, 116, 139, ${Math.random() * 0.4 + 0.2})`;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+                ctx.stroke();
+            }
+
+            // Characters
+            ctx.font = "bold 22px monospace";
+            ctx.textBaseline = "middle";
+            for (let i = 0; i < code.length; i++) {
+                ctx.save();
+                const x = 22 + i * 28;
+                const y = canvas.height / 2 + (Math.random() * 6 - 3);
+                const angle = (Math.random() - 0.5) * 0.35;
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+                ctx.fillStyle = "#1e293b";
+                ctx.fillText(code[i], 0, 0);
+                ctx.restore();
+            }
+        }
+
+        function requestSecureDelete(category, label, rawItem, onConfirmCallback) {
+            const now = Date.now();
+            if (now < botLockoutUntil) {
+                const waitSec = Math.ceil((botLockoutUntil - now) / 1000);
+                showToast(`Rate limit active! Please wait ${waitSec}s before deleting.`);
+                return;
+            }
+
+            if (securityConfig.adminOnlyDelete && currentUser.role !== 'Admin') {
+                showToast("Deletion restricted to HSE Admin role only!");
+                return;
+            }
+
+            pendingDeleteAction = {
+                category,
+                label,
+                rawItem: JSON.parse(JSON.stringify(rawItem)),
+                onConfirmCallback
+            };
+
+            openModal(`
+                <div class="space-y-4">
+                    <div class="flex justify-between items-start border-b border-slate-200 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">Anti-Bot Deletion Verification</h3>
+                                <p class="text-xs text-slate-500">Confirm deletion of <span class="font-semibold text-slate-700">${category}: ${label}</span></p>
+                            </div>
+                        </div>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+
+                    <form onsubmit="confirmSecureDelete(event)" class="space-y-3">
+                        <!-- Honeypot field for bots -->
+                        <input type="text" id="deleteBotHoneypot" class="hidden" tabindex="-1" autocomplete="off">
+
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                            <label class="block text-xs font-semibold text-slate-700">1. Human CAPTCHA Challenge</label>
+                            <div class="flex items-center gap-3">
+                                <canvas id="captchaCanvas" width="165" height="44" class="rounded-lg border border-slate-300 bg-white"></canvas>
+                                <button type="button" onclick="generateCaptchaCanvas()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold">
+                                    <i class="fa-solid fa-rotate"></i> Refresh
+                                </button>
+                            </div>
+                            <input type="text" id="deleteCaptchaInput" required placeholder="Enter 5-character code above" class="w-full p-2 border border-slate-300 rounded-xl text-sm uppercase tracking-wider font-mono">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">2. Security Authorization PIN (Default: 1234)</label>
+                            <input type="password" id="deletePinInput" required placeholder="Enter Delete PIN" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+
+                        <p class="text-[11px] text-slate-500">
+                            <i class="fa-solid fa-box-archive text-emerald-600 mr-1"></i> Deleted items are automatically backed up in the Admin Recovery Vault.
+                        </p>
+
+                        <div class="flex justify-end gap-2 pt-2">
+                            <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl">Cancel</button>
+                            <button type="submit" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl">Verify & Delete</button>
+                        </div>
+                    </form>
+                </div>
+            `);
+
+            setTimeout(() => generateCaptchaCanvas(), 30);
+        }
+
+        function confirmSecureDelete(e) {
+            e.preventDefault();
+            const honeypot = document.getElementById('deleteBotHoneypot')?.value;
+            if (honeypot) {
+                botLockoutUntil = Date.now() + 30000;
+                closeModal();
+                showToast("Bot activity detected! Locked for 30s.");
+                return;
+            }
+
+            const now = Date.now();
+            deleteAttemptTimestamps = deleteAttemptTimestamps.filter(t => now - t < 15000);
+            deleteAttemptTimestamps.push(now);
+            if (deleteAttemptTimestamps.length > 4) {
+                botLockoutUntil = now + 30000;
+                closeModal();
+                showToast("Too many rapid delete attempts! Locked for 30s.");
+                return;
+            }
+
+            const userCaptcha = (document.getElementById('deleteCaptchaInput')?.value || "").trim().toUpperCase();
+            const userPin = (document.getElementById('deletePinInput')?.value || "").trim();
+
+            if (userCaptcha !== activeCaptchaCode) {
+                showToast("Incorrect CAPTCHA code! Try again.");
+                generateCaptchaCanvas();
+                return;
+            }
+
+            if (userPin !== (securityConfig.deletePin || "1234")) {
+                showToast("Invalid Security Authorization PIN!");
+                return;
+            }
+
+            if (pendingDeleteAction) {
+                recycleBinData.unshift({
+                    deletedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                    deletedBy: currentUser.name,
+                    category: pendingDeleteAction.category,
+                    label: pendingDeleteAction.label,
+                    payload: pendingDeleteAction.rawItem
+                });
+                pendingDeleteAction.onConfirmCallback();
+                pendingDeleteAction = null;
+                saveAllData();
+            }
+
+            closeModal();
+        }
+
+        function updateSecuritySettings() {
+            const pinVal = document.getElementById('adminSecurityPinInput')?.value?.trim();
+            const adminOnly = document.getElementById('adminOnlyDeleteToggle')?.checked;
+            if (pinVal) securityConfig.deletePin = pinVal;
+            securityConfig.adminOnlyDelete = Boolean(adminOnly);
+            saveAllData();
+            showToast("Anti-Bot & Delete security settings updated!");
+        }
+
+        function renderRecycleBin() {
+            const list = document.getElementById('recycleBinList');
+            const badge = document.getElementById('recycleBinCount');
+            if (badge) badge.textContent = `${recycleBinData.length} Archived`;
+            if (!list) return;
+
+            if (recycleBinData.length === 0) {
+                list.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No deleted records in vault.</p>`;
+                return;
+            }
+
+            list.innerHTML = '';
+            recycleBinData.forEach((entry, idx) => {
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs";
+                row.innerHTML = `
+                    <div>
+                        <span class="font-bold text-slate-800">[${entry.category}] ${entry.label}</span>
+                        <p class="text-[10px] text-slate-400">Deleted by ${entry.deletedBy} at ${entry.deletedAt}</p>
+                    </div>
+                    <button onclick="restoreDeletedItem(${idx})" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-[11px] flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-left"></i> Restore
+                    </button>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function restoreDeletedItem(idx) {
+            const entry = recycleBinData[idx];
+            if (!entry) return;
+
+            if (entry.category === "Zone Log") zoneInspectionLogs.unshift(entry.payload);
+            else if (entry.category === "Extinguisher") fireExtinguishers.push(entry.payload);
+            else if (entry.category === "Hydrant/Pump") firePumps.push(entry.payload);
+            else if (entry.category === "CAR/PAR") carParData.unshift(entry.payload);
+            else if (entry.category === "UAUC") uaucData.unshift(entry.payload);
+            else if (entry.category === "Accident") accidentData.unshift(entry.payload);
+            else if (entry.category === "Zone Parameter") {
+                const targetZone = ZONES_DATA.find(z => z.id === entry.payload.zoneId);
+                if (targetZone) targetZone.parameters.push(entry.payload.param);
+            }
+
+            recycleBinData.splice(idx, 1);
+            saveAllData();
+            showToast(`Restored ${entry.category}: ${entry.label}`);
+        }
+
+        function updateAnalyticsCounters() {
+            const openCarCount = carParData.filter(c => c.status !== 'CLOSED').length;
+            const statOpenCar = document.getElementById('statOpenCar');
+            if (statOpenCar) statOpenCar.textContent = `${openCarCount} Open`;
+
+            const statFireCount = document.getElementById('statFireCount');
+            if (statFireCount) statFireCount.textContent = `${fireExtinguishers.length} Units`;
+
+            const expiringCount = fireExtinguishers.filter(f => f.status === 'EXPIRED_SOON' || f.status === 'DEFECT').length;
+            const statExpiringSoon = document.getElementById('statExpiringSoon');
+            if (statExpiringSoon) statExpiringSoon.textContent = `${expiringCount} Require Attention`;
+
+            const statUaucCount = document.getElementById('statUaucCount');
+            if (statUaucCount) statUaucCount.textContent = `${uaucData.length} Reports`;
+        }
+
+        // --- PHOTO ATTACHMENT HELPER ---
+        function handlePhotoSelect(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            pendingPhotoFile = file;
+            const previewUrl = URL.createObjectURL(file);
+            photoPreviewCache[file.name] = previewUrl;
+            const previewImg = document.getElementById('modalPhotoPreviewImg');
+            const previewBox = document.getElementById('modalPhotoPreviewBox');
+            if (previewImg && previewBox) {
+                previewImg.src = previewUrl;
+                previewBox.classList.remove('hidden');
+            }
+        }
+
+        function viewAttachedPhoto(photoName, titleText) {
+            if (!photoName) return;
+            const url = photoPreviewCache[photoName] || `https://placehold.co/600x400/e2e8f0/0f172a?text=${encodeURIComponent(photoName)}`;
+            openModal(`
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900">${titleText || 'Attached Inspection Photo'}</h3>
+                            <p class="text-xs text-slate-500">File: ${photoName}</p>
+                        </div>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+                    <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center max-h-96">
+                        <img src="${url}" alt="${photoName}" class="max-h-96 w-auto object-contain">
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="closeModal()" class="px-4 py-2 bg-slate-800 text-white text-xs font-semibold rounded-xl">Close Preview</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        function renderPhotoBadge(photoName, contextTitle) {
+            if (!photoName) {
+                return `<span class="text-xs text-slate-400">No Photo</span>`;
+            }
+            const safeName = photoName.replace(/'/g, "\\'");
+            const safeTitle = (contextTitle || 'Attached Photo').replace(/'/g, "\\'");
+            return `
+                <button onclick="viewAttachedPhoto('${safeName}', '${safeTitle}')" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-lg text-xs font-semibold inline-flex items-center gap-1">
+                    <i class="fa-solid fa-camera"></i> View
+                </button>
+            `;
+        }
+
+        function getPhotoInputHtml(existingPhotoName = "") {
+            const hasExisting = Boolean(existingPhotoName);
+            const existingUrl = hasExisting ? (photoPreviewCache[existingPhotoName] || `https://placehold.co/400x260/e2e8f0/0f172a?text=${encodeURIComponent(existingPhotoName)}`) : "";
+            return `
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                    <label class="block text-xs font-semibold text-slate-700">
+                        <i class="fa-solid fa-camera text-brand-600 mr-1"></i> Photo Attachment (Camera / Gallery)
+                    </label>
+                    <input type="file" accept="image/*" onchange="handlePhotoSelect(event)" class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
+                    <div id="modalPhotoPreviewBox" class="${hasExisting ? '' : 'hidden'} pt-2">
+                        <img id="modalPhotoPreviewImg" src="${existingUrl}" alt="Preview" class="h-28 rounded-lg border border-slate-300 object-cover">
+                        <p class="text-[11px] text-slate-500 mt-1">Attached: <span id="modalPhotoNameText">${existingPhotoName || 'Selected Image'}</span></p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- INIT APP ---
+        window.addEventListener("DOMContentLoaded", () => {
+            document.getElementById('currentInspectionDate').textContent = new Date().toISOString().split('T')[0];
+            refreshAllViews();
+            initCharts();
+            initCloudSync();
         });
 
         // --- AUTHENTICATION ---
         function handleLogin(e) {
             e.preventDefault();
+            const honeypot = document.getElementById('loginBotHoneypot')?.value;
+            if (honeypot) {
+                showToast("Automated bot login blocked!");
+                return;
+            }
             const role = document.getElementById('loginRole').value;
             const username = document.getElementById('loginUsername').value;
 
@@ -791,7 +1337,6 @@
             document.getElementById('navUserName').textContent = currentUser.name;
             document.getElementById('navUserRole').textContent = role === "Admin" ? "HSE Admin / Manager" : "Safety Inspector";
 
-            // Show admin tab if admin
             const adminTab = document.getElementById('adminTabBtn');
             if (role === 'Admin') {
                 adminTab.classList.remove('hidden');
@@ -829,9 +1374,10 @@
         // --- RENDER 9 ZONES GRID ---
         function renderZonesGrid() {
             const container = document.getElementById('zonesGrid');
+            if (!container) return;
             container.innerHTML = '';
 
-            ZONES_DATA.forEach((zone, idx) => {
+            ZONES_DATA.forEach((zone) => {
                 const card = document.createElement('div');
                 card.className = "bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between";
                 card.innerHTML = `
@@ -855,17 +1401,51 @@
             });
         }
 
-        // --- START ZONE INSPECTION MODAL ---
+        function renderZoneLogsTable() {
+            const tbody = document.getElementById('zoneLogsTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            zoneInspectionLogs.forEach((log, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 text-xs text-slate-500">${log.date}</td>
+                    <td class="p-3 font-semibold text-slate-800">${log.zone}</td>
+                    <td class="p-3">${log.inspector}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">${log.score}</span></td>
+                    <td class="p-3 text-xs text-slate-600">${log.remarks || '-'}</td>
+                    <td class="p-3 text-center">${renderPhotoBadge(log.photoName, log.zone)}</td>
+                    <td class="p-3 text-right">
+                        <button onclick="deleteZoneLog(${index})" class="text-rose-600 hover:text-rose-800 text-xs font-semibold px-2 py-1 rounded hover:bg-rose-50" title="Delete Log">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteZoneLog(index) {
+            const item = zoneInspectionLogs[index];
+            if (!item) return;
+            requestSecureDelete("Zone Log", `${item.zone} (${item.date})`, item, () => {
+                zoneInspectionLogs.splice(index, 1);
+                showToast("Zone inspection log moved to Recovery Vault.");
+            });
+        }
+
+        // --- START ZONE INSPECTION MODAL (WITH PHOTO ATTACHMENT) ---
         function startZoneInspection(zoneId) {
             const zone = ZONES_DATA.find(z => z.id === zoneId);
             if (!zone) return;
+            pendingPhotoFile = null;
 
             let html = `
                 <div class="space-y-4">
                     <div class="flex justify-between items-start">
                         <div>
                             <h3 class="text-lg font-bold text-slate-900">${zone.name}</h3>
-                            <p class="text-xs text-slate-500">Conduct detailed parameter evaluation.</p>
+                            <p class="text-xs text-slate-500">Conduct detailed parameter evaluation and attach inspection photo.</p>
                         </div>
                         <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                     </div>
@@ -902,9 +1482,10 @@
             });
 
             html += `
+                        ${getPhotoInputHtml()}
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Inspector Overall Signature / Note</label>
-                            <textarea placeholder="Overall zone safety assessment..." class="w-full p-2.5 text-sm border border-slate-300 rounded-xl" rows="2"></textarea>
+                            <textarea id="zoneOverallNote" placeholder="Overall zone safety assessment..." class="w-full p-2.5 text-sm border border-slate-300 rounded-xl" rows="2"></textarea>
                         </div>
                         <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm transition">
                             Submit Inspection Checklist
@@ -918,11 +1499,36 @@
 
         function submitZoneInspection(e, zoneId) {
             e.preventDefault();
+            const zone = ZONES_DATA.find(z => z.id === zoneId);
+            if (!zone) return;
+
+            let satCount = 0;
+            let totalCount = zone.parameters.length;
+            zone.parameters.forEach((_, idx) => {
+                const selected = document.querySelector(`input[name="param_${idx}"]:checked`)?.value;
+                if (selected === 'Satisfactory' || selected === 'NA') satCount++;
+            });
+
+            const scorePct = totalCount > 0 ? Math.round((satCount / totalCount) * 100) + "%" : "100%";
+            const remarks = document.getElementById('zoneOverallNote')?.value || "Routine inspection completed";
+
+            zoneInspectionLogs.unshift({
+                id: `ZLOG-${Date.now()}`,
+                date: new Date().toISOString().split('T')[0],
+                zone: zone.name,
+                inspector: currentUser.name,
+                score: scorePct,
+                remarks: remarks,
+                photoName: pendingPhotoFile ? pendingPhotoFile.name : ""
+            });
+
+            pendingPhotoFile = null;
+            saveAllData();
             closeModal();
-            showToast("Zone inspection recorded successfully!");
+            showToast("Zone inspection & photo recorded successfully!");
         }
 
-        // --- FIRE FIGHTING EQUIPMENT LOGIC ---
+        // --- FIRE FIGHTING EQUIPMENT LOGIC (ADD, EDIT, DELETE + MFG YEAR + 5 HYDRANT CHECKS) ---
         function switchFireSubCategory(sub) {
             document.getElementById('fireSub-extinguishers').classList.add('hidden');
             document.getElementById('fireSub-pumps').classList.add('hidden');
@@ -940,28 +1546,35 @@
 
         function renderExtinguishersTable() {
             const tbody = document.getElementById('extinguisherTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
             document.getElementById('extinguisherCount').textContent = fireExtinguishers.length;
 
-            fireExtinguishers.forEach(item => {
+            fireExtinguishers.forEach((item, index) => {
                 const tr = document.createElement('tr');
                 let statusBadge = `<span class="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">Good</span>`;
                 if (item.status === 'EXPIRED_SOON') {
                     statusBadge = `<span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">Expiry Warning</span>`;
                 } else if (item.status === 'DEFECT') {
-                    statusBadge = `<span class="px-2 py-1 bg-rose-100 text-rose-800 text-xs font-semibold rounded-full">Defective Pressure</span>`;
+                    statusBadge = `<span class="px-2 py-1 bg-rose-100 text-rose-800 text-xs font-semibold rounded-full">Defective</span>`;
                 }
 
                 tr.innerHTML = `
                     <td class="p-3 font-semibold text-slate-900">${item.id}</td>
                     <td class="p-3">${item.type}</td>
                     <td class="p-3">${item.capacity}</td>
+                    <td class="p-3 font-mono text-slate-700">${item.mfgYear || '2022'}</td>
                     <td class="p-3">${item.zone}</td>
                     <td class="p-3">${item.pressure}</td>
                     <td class="p-3 font-medium">${item.expiry}</td>
                     <td class="p-3 text-center">${statusBadge}</td>
-                    <td class="p-3 text-right">
-                        <button onclick="inspectExtinguisher('${item.id}')" class="text-brand-600 hover:text-brand-800 text-xs font-semibold">Inspect</button>
+                    <td class="p-3 text-right whitespace-nowrap space-x-1">
+                        <button onclick="openFireExtinguisherModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold" title="Edit / Inspect">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit
+                        </button>
+                        <button onclick="deleteFireExtinguisher(${index})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold" title="Delete">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -977,126 +1590,293 @@
             });
         }
 
+        function openFireExtinguisherModal(editIndex = null) {
+            const isEdit = editIndex !== null && fireExtinguishers[editIndex];
+            const item = isEdit ? fireExtinguishers[editIndex] : {
+                id: "", type: "Dry Powder", capacity: "9.0 kg", mfgYear: "2024", zone: ZONES_DATA[0].name, pressure: "Good", expiry: "2027-06-01", status: "OK"
+            };
+
+            openModal(`
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? 'Edit / Inspect Portable Fire Extinguisher' : 'Add Portable Fire Extinguisher'}</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form onsubmit="saveFireExtinguisher(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Serial / Tag ID</label>
+                            <input type="text" id="feId" required value="${item.id}" placeholder="e.g. PFE-Z5-09" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Year of Manufacture</label>
+                            <input type="number" id="feMfgYear" required min="1995" max="2035" value="${item.mfgYear || '2023'}" placeholder="e.g. 2023" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Type</label>
+                            <select id="feType" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option ${item.type === 'Dry Powder' ? 'selected' : ''}>Dry Powder</option>
+                                <option ${item.type === 'CO2' ? 'selected' : ''}>CO2</option>
+                                <option ${item.type === 'Foam' ? 'selected' : ''}>Foam</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Capacity</label>
+                            <input type="text" id="feCap" value="${item.capacity}" placeholder="9.0 kg" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
+                        <select id="feZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            ${ZONES_DATA.map(z => `<option ${item.zone === z.name ? 'selected' : ''}>${z.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Pressure</label>
+                            <select id="fePressure" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option ${item.pressure === 'Good' ? 'selected' : ''}>Good</option>
+                                <option ${item.pressure === 'Low' ? 'selected' : ''}>Low</option>
+                                <option ${item.pressure === 'Overcharged' ? 'selected' : ''}>Overcharged</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Expiry Date</label>
+                            <input type="date" id="feExpiry" required value="${item.expiry}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Condition Status</label>
+                            <select id="feStatus" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option value="OK" ${item.status === 'OK' ? 'selected' : ''}>Good (OK)</option>
+                                <option value="EXPIRED_SOON" ${item.status === 'EXPIRED_SOON' ? 'selected' : ''}>Expiry Warning</option>
+                                <option value="DEFECT" ${item.status === 'DEFECT' ? 'selected' : ''}>Defective</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm">
+                        ${isEdit ? 'Update Extinguisher Record' : 'Save Extinguisher Record'}
+                    </button>
+                </form>
+            `);
+        }
+
+        function saveFireExtinguisher(e, editIndex) {
+            e.preventDefault();
+            const record = {
+                id: document.getElementById('feId').value,
+                type: document.getElementById('feType').value,
+                capacity: document.getElementById('feCap').value || "9.0 kg",
+                mfgYear: document.getElementById('feMfgYear').value || "2023",
+                zone: document.getElementById('feZone').value,
+                pressure: document.getElementById('fePressure').value,
+                expiry: document.getElementById('feExpiry').value,
+                status: document.getElementById('feStatus').value
+            };
+
+            if (editIndex !== null && editIndex !== undefined) {
+                fireExtinguishers[editIndex] = record;
+                showToast("Fire extinguisher updated!");
+            } else {
+                fireExtinguishers.push(record);
+                showToast("New fire extinguisher added!");
+            }
+            saveAllData();
+            closeModal();
+        }
+
+        function deleteFireExtinguisher(index) {
+            const item = fireExtinguishers[index];
+            if (!item) return;
+            requestSecureDelete("Extinguisher", `${item.id} (${item.zone})`, item, () => {
+                fireExtinguishers.splice(index, 1);
+                showToast("Fire extinguisher moved to Recovery Vault.");
+            });
+        }
+
+        // --- HOSE REEL, HYDRANT & PUMP (Hose Condition, Coupling, Nozzle, Fire Hydrant Box & Valve) ---
         function renderPumpTable() {
             const tbody = document.getElementById('pumpTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
-            firePumps.forEach(item => {
+
+            const pumpTotalEl = document.getElementById('pumpTotalCount');
+            if (pumpTotalEl) pumpTotalEl.textContent = `${firePumps.length} Units`;
+
+            firePumps.forEach((item, index) => {
+                const badgeClass = item.status === 'PASS' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="p-3 font-bold text-slate-800">${item.name}</td>
-                    <td class="p-3">${item.location}</td>
-                    <td class="p-3">${item.condition}</td>
-                    <td class="p-3">${item.nozzle}</td>
+                    <td class="p-3 text-xs">${item.location}</td>
+                    <td class="p-3">${item.hoseCondition || 'Good'}</td>
+                    <td class="p-3">${item.coupling || 'Good'}</td>
+                    <td class="p-3">${item.nozzle || 'Functional'}</td>
+                    <td class="p-3">${item.hydrantBox || 'Good'}</td>
+                    <td class="p-3">${item.valve || 'Operational'}</td>
                     <td class="p-3 text-xs text-slate-500">${item.lastTest}</td>
-                    <td class="p-3 text-center"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">Passed</span></td>
-                    <td class="p-3 text-right">
-                        <button onclick="showToast('Logged pump test')" class="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg">Test Run</button>
+                    <td class="p-3 text-center"><span class="px-2 py-0.5 ${badgeClass} text-xs font-semibold rounded-full">${item.status}</span></td>
+                    <td class="p-3 text-right whitespace-nowrap space-x-1">
+                        <button onclick="openFirePumpModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit
+                        </button>
+                        <button onclick="deleteFirePump(${index})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        function inspectExtinguisher(id) {
-            openModal(`
-                <h3 class="text-lg font-bold text-slate-900 mb-2">Inspect Fire Extinguisher: ${id}</h3>
-                <p class="text-xs text-slate-500 mb-4">Verify nozzle pin seal, pressure gauge needle, and expiry tag.</p>
-                <form onsubmit="event.preventDefault(); closeModal(); showToast('Extinguisher Inspection Saved!');" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Pressure Status</label>
-                        <select class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                            <option>In Green Zone (Normal)</option>
-                            <option>Undercharged (Low Pressure)</option>
-                            <option>Overcharged</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Safety Seal & Pin</label>
-                        <select class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                            <option>Intact & Sealed</option>
-                            <option>Missing / Damaged</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Next Hydrostatic Test Due Date</label>
-                        <input type="date" value="2027-05-01" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                    </div>
-                    <button type="submit" class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-sm">Save Inspection Log</button>
-                </form>
-            `);
-        }
+        function openFirePumpModal(editIndex = null) {
+            const isEdit = editIndex !== null && firePumps[editIndex];
+            const item = isEdit ? firePumps[editIndex] : {
+                name: "",
+                location: ZONES_DATA[0].name,
+                hoseCondition: "Good",
+                coupling: "Good",
+                nozzle: "Functional",
+                hydrantBox: "Good",
+                valve: "Operational",
+                lastTest: new Date().toISOString().split('T')[0],
+                status: "PASS"
+            };
 
-        function openAddFireEquipmentModal() {
             openModal(`
-                <h3 class="text-lg font-bold text-slate-900 mb-4">Add Fire Equipment</h3>
-                <form onsubmit="saveNewExtinguisher(event)" class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Serial / Tag ID</label>
-                        <input type="text" id="newFeId" required placeholder="e.g. PFE-Z5-09" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? 'Edit / Inspect Hose Reel, Hydrant & Pump' : 'Add Hose Reel, Hydrant & Pump'}</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form onsubmit="saveFirePump(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Type</label>
-                            <select id="newFeType" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                                <option>Dry Powder</option>
-                                <option>CO2</option>
-                                <option>Foam</option>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Equipment Name / Tag</label>
+                            <input type="text" id="pumpName" required value="${item.name}" placeholder="e.g. Hose Reel #02 / Hydrant #05" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Zone / Location</label>
+                            <select id="pumpLocation" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                ${ZONES_DATA.map(z => `<option ${item.location === z.name ? 'selected' : ''}>${z.name}</option>`).join('')}
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Capacity</label>
-                            <input type="text" id="newFeCap" placeholder="9.0 kg" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">5-Point Inspection Criteria</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">1. Hose Condition</label>
+                                <select id="pumpHoseCondition" class="w-full p-2 border border-slate-300 rounded-xl text-sm bg-white">
+                                    <option ${item.hoseCondition === 'Good' ? 'selected' : ''}>Good</option>
+                                    <option ${item.hoseCondition === 'Leaking / Cracked' ? 'selected' : ''}>Leaking / Cracked</option>
+                                    <option ${item.hoseCondition === 'Damaged / Missing' ? 'selected' : ''}>Damaged / Missing</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">2. Coupling</label>
+                                <select id="pumpCoupling" class="w-full p-2 border border-slate-300 rounded-xl text-sm bg-white">
+                                    <option ${item.coupling === 'Good' ? 'selected' : ''}>Good</option>
+                                    <option ${item.coupling === 'Loose / Worn' ? 'selected' : ''}>Loose / Worn</option>
+                                    <option ${item.coupling === 'Corroded / Damaged' ? 'selected' : ''}>Corroded / Damaged</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">3. Nozzle</label>
+                                <select id="pumpNozzle" class="w-full p-2 border border-slate-300 rounded-xl text-sm bg-white">
+                                    <option ${item.nozzle === 'Functional' ? 'selected' : ''}>Functional</option>
+                                    <option ${item.nozzle === 'Blocked / Stiff' ? 'selected' : ''}>Blocked / Stiff</option>
+                                    <option ${item.nozzle === 'Missing / Broken' ? 'selected' : ''}>Missing / Broken</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">4. Fire Hydrant Box</label>
+                                <select id="pumpHydrantBox" class="w-full p-2 border border-slate-300 rounded-xl text-sm bg-white">
+                                    <option ${item.hydrantBox === 'Good' ? 'selected' : ''}>Good</option>
+                                    <option ${item.hydrantBox === 'Minor Rust' ? 'selected' : ''}>Minor Rust</option>
+                                    <option ${item.hydrantBox === 'Damaged / Obstructed' ? 'selected' : ''}>Damaged / Obstructed</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">5. Valve</label>
+                                <select id="pumpValve" class="w-full p-2 border border-slate-300 rounded-xl text-sm bg-white">
+                                    <option ${item.valve === 'Operational' ? 'selected' : ''}>Operational</option>
+                                    <option ${item.valve === 'Leaking' ? 'selected' : ''}>Leaking</option>
+                                    <option ${item.valve === 'Jammed / Defective' ? 'selected' : ''}>Jammed / Defective</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
-                        <select id="newFeZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                            ${ZONES_DATA.map(z => `<option>${z.name}</option>`).join('')}
-                        </select>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Last Test Date</label>
+                            <input type="date" id="pumpLastTest" required value="${item.lastTest}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Overall Status</label>
+                            <select id="pumpStatus" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option value="PASS" ${item.status === 'PASS' ? 'selected' : ''}>PASS</option>
+                                <option value="FAIL" ${item.status === 'FAIL' ? 'selected' : ''}>FAIL (Action Needed)</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Expiry Date</label>
-                        <input type="date" id="newFeExpiry" required class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                    </div>
-                    <button type="submit" class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-sm">Save Equipment</button>
+
+                    <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm">
+                        ${isEdit ? 'Update Equipment Record' : 'Save Equipment Record'}
+                    </button>
                 </form>
             `);
         }
 
-        function saveNewExtinguisher(e) {
+        function saveFirePump(e, editIndex) {
             e.preventDefault();
-            const newItem = {
-                id: document.getElementById('newFeId').value,
-                type: document.getElementById('newFeType').value,
-                capacity: document.getElementById('newFeCap').value || "9.0 kg",
-                zone: document.getElementById('newFeZone').value,
-                pressure: "Good",
-                expiry: document.getElementById('newFeExpiry').value,
-                status: "OK"
+            const record = {
+                id: `HRP-${Date.now()}`,
+                name: document.getElementById('pumpName').value,
+                location: document.getElementById('pumpLocation').value,
+                hoseCondition: document.getElementById('pumpHoseCondition').value,
+                coupling: document.getElementById('pumpCoupling').value,
+                nozzle: document.getElementById('pumpNozzle').value,
+                hydrantBox: document.getElementById('pumpHydrantBox').value,
+                valve: document.getElementById('pumpValve').value,
+                lastTest: document.getElementById('pumpLastTest').value,
+                status: document.getElementById('pumpStatus').value
             };
-            fireExtinguishers.push(newItem);
+
+            if (editIndex !== null && editIndex !== undefined) {
+                firePumps[editIndex] = record;
+                showToast("Hose Reel / Hydrant record updated!");
+            } else {
+                firePumps.push(record);
+                showToast("New Hose Reel / Hydrant added!");
+            }
             saveAllData();
-            renderExtinguishersTable();
-            renderAlertTable();
             closeModal();
-            showToast("Equipment registered successfully!");
         }
 
-        // --- CAR / PAR REGISTER ---
+        function deleteFirePump(index) {
+            const item = firePumps[index];
+            if (!item) return;
+            requestSecureDelete("Hydrant/Pump", `${item.name} (${item.location})`, item, () => {
+                firePumps.splice(index, 1);
+                showToast("Hose Reel / Hydrant moved to Recovery Vault.");
+            });
+        }
+
+        // --- CAR / PAR REGISTER (ADD, EDIT, DELETE + PHOTO ATTACHMENT) ---
         function renderCarParTable() {
             const tbody = document.getElementById('carParTableBody');
+            if (!tbody) return;
             const statusFilter = document.getElementById('filterCarStatus').value;
             const typeFilter = document.getElementById('filterCarType').value;
 
             tbody.innerHTML = '';
 
-            let filtered = carParData.filter(item => {
-                if (statusFilter !== 'ALL' && item.status !== statusFilter) return false;
-                if (typeFilter !== 'ALL' && item.type !== typeFilter) return false;
-                return true;
-            });
+            carParData.forEach((item, index) => {
+                if (statusFilter !== 'ALL' && item.status !== statusFilter) return;
+                if (typeFilter !== 'ALL' && item.type !== typeFilter) return;
 
-            filtered.forEach(item => {
                 let badgeClass = "bg-amber-100 text-amber-800";
                 if (item.status === 'CLOSED') badgeClass = "bg-emerald-100 text-emerald-800";
                 if (item.status === 'IN_PROGRESS') badgeClass = "bg-blue-100 text-blue-800";
@@ -1105,91 +1885,191 @@
                 tr.innerHTML = `
                     <td class="p-3 font-bold text-slate-900">${item.ref}</td>
                     <td class="p-3"><span class="px-2 py-0.5 ${item.type === 'CAR' ? 'bg-rose-100 text-rose-800' : 'bg-indigo-100 text-indigo-800'} text-xs font-bold rounded">${item.type}</span></td>
-                    <td class="p-3">${item.zone}</td>
+                    <td class="p-3 text-xs">${item.zone}</td>
                     <td class="p-3 text-slate-700">${item.finding}</td>
                     <td class="p-3 font-medium">${item.pic}</td>
                     <td class="p-3 text-xs">${item.target}</td>
+                    <td class="p-3 text-center">${renderPhotoBadge(item.photoName, item.ref)}</td>
                     <td class="p-3 text-center"><span class="px-2 py-1 ${badgeClass} text-xs font-semibold rounded-full">${item.status}</span></td>
-                    <td class="p-3 text-right">
-                        <button onclick="toggleCarStatus('${item.ref}')" class="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg">Update</button>
+                    <td class="p-3 text-right whitespace-nowrap space-x-1">
+                        <button onclick="openCarParModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit
+                        </button>
+                        <button onclick="deleteCarPar(${index})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        function openAddCarParModal() {
+        function renderLoginPendingCarPar() {
+            const listEl = document.getElementById('loginPendingCarParList');
+            const totalBadge = document.getElementById('loginPendingCountBadge');
+            const openCountEl = document.getElementById('loginCarOpenCount');
+            const progressCountEl = document.getElementById('loginCarProgressCount');
+            if (!listEl) return;
+
+            const pendingItems = carParData.filter(item => item.status !== 'CLOSED');
+            const openCount = pendingItems.filter(item => item.status === 'OPEN').length;
+            const progressCount = pendingItems.filter(item => item.status === 'IN_PROGRESS').length;
+
+            if (totalBadge) totalBadge.textContent = `${pendingItems.length} Pending`;
+            if (openCountEl) openCountEl.textContent = openCount;
+            if (progressCountEl) progressCountEl.textContent = progressCount;
+
+            listEl.innerHTML = '';
+
+            if (pendingItems.length === 0) {
+                listEl.innerHTML = `
+                    <div class="p-6 text-center bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                        <i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-2"></i>
+                        <p class="text-sm font-bold text-emerald-900">All CAR / PAR Items Closed</p>
+                        <p class="text-xs text-emerald-600 mt-0.5">No pending corrective or preventive actions at this time.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            pendingItems.forEach((item) => {
+                const isCar = item.type === 'CAR';
+                const statusBadge = item.status === 'OPEN'
+                    ? `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[11px] font-semibold rounded-full">OPEN</span>`
+                    : `<span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-semibold rounded-full">IN PROGRESS</span>`;
+
+                const card = document.createElement('div');
+                card.className = "p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition space-y-1.5";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-900 text-xs">${item.ref}</span>
+                            <span class="px-1.5 py-0.5 ${isCar ? 'bg-rose-100 text-rose-800' : 'bg-indigo-100 text-indigo-800'} text-[10px] font-bold rounded">${item.type}</span>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <p class="text-xs font-medium text-slate-800">${item.finding}</p>
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1.5 text-[11px] text-slate-500 border-t border-slate-200/70">
+                        <span class="truncate max-w-[55%]"><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>${item.zone}</span>
+                        <div class="flex items-center gap-3">
+                            <span><i class="fa-solid fa-user text-slate-400 mr-1"></i>${item.pic}</span>
+                            <span class="font-semibold text-slate-700"><i class="fa-regular fa-calendar text-slate-400 mr-1"></i>Due: ${item.target}</span>
+                        </div>
+                    </div>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+
+        function openCarParModal(editIndex = null) {
+            pendingPhotoFile = null;
+            const isEdit = editIndex !== null && carParData[editIndex];
+            const item = isEdit ? carParData[editIndex] : {
+                ref: `CAR-2026-0${Math.floor(Math.random() * 90 + 10)}`,
+                type: "CAR",
+                zone: ZONES_DATA[0].name,
+                finding: "",
+                pic: "",
+                target: new Date().toISOString().split('T')[0],
+                status: "OPEN",
+                photoName: ""
+            };
+
             openModal(`
-                <h3 class="text-lg font-bold text-slate-900 mb-4">Raise CAR / PAR Issue</h3>
-                <form onsubmit="saveCarPar(event)" class="space-y-3">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? `Edit ${item.ref}` : 'Raise CAR / PAR Issue'}</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form onsubmit="saveCarPar(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Issue Type</label>
                             <select id="carType" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                                <option value="CAR">CAR (Corrective Action)</option>
-                                <option value="PAR">PAR (Preventive Action)</option>
+                                <option value="CAR" ${item.type === 'CAR' ? 'selected' : ''}>CAR (Corrective Action)</option>
+                                <option value="PAR" ${item.type === 'PAR' ? 'selected' : ''}>PAR (Preventive Action)</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
-                            <select id="carZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                                ${ZONES_DATA.map(z => `<option>${z.name}</option>`).join('')}
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                            <select id="carStatus" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option value="OPEN" ${item.status === 'OPEN' ? 'selected' : ''}>OPEN</option>
+                                <option value="IN_PROGRESS" ${item.status === 'IN_PROGRESS' ? 'selected' : ''}>IN_PROGRESS</option>
+                                <option value="CLOSED" ${item.status === 'CLOSED' ? 'selected' : ''}>CLOSED</option>
                             </select>
                         </div>
                     </div>
                     <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
+                        <select id="carZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            ${ZONES_DATA.map(z => `<option ${item.zone === z.name ? 'selected' : ''}>${z.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Non-Conformity Description</label>
-                        <textarea id="carFinding" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2" placeholder="Describe the safety hazard or non-compliance..."></textarea>
+                        <textarea id="carFinding" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2" placeholder="Describe the safety hazard or non-compliance...">${item.finding}</textarea>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Person In-Charge (PIC)</label>
-                            <input type="text" id="carPic" required placeholder="e.g. Engineer Name" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <input type="text" id="carPic" required value="${item.pic}" placeholder="e.g. Engineer Name" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Target Completion Date</label>
-                            <input type="date" id="carTarget" required class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <input type="date" id="carTarget" required value="${item.target}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                         </div>
                     </div>
-                    <button type="submit" class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-sm">Register CAR/PAR</button>
+                    ${getPhotoInputHtml(item.photoName)}
+                    <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm">
+                        ${isEdit ? 'Save Changes' : 'Register CAR/PAR'}
+                    </button>
                 </form>
             `);
         }
 
-        function saveCarPar(e) {
+        function saveCarPar(e, editIndex) {
             e.preventDefault();
-            const newCar = {
-                ref: `${document.getElementById('carType').value}-2026-0${Math.floor(Math.random()*90 + 10)}`,
-                type: document.getElementById('carType').value,
+            const isEdit = editIndex !== null && editIndex !== undefined;
+            const existing = isEdit ? carParData[editIndex] : null;
+            const typeVal = document.getElementById('carType').value;
+
+            const record = {
+                ref: isEdit ? existing.ref : `${typeVal}-2026-0${Math.floor(Math.random() * 90 + 10)}`,
+                type: typeVal,
                 zone: document.getElementById('carZone').value,
                 finding: document.getElementById('carFinding').value,
                 pic: document.getElementById('carPic').value,
                 target: document.getElementById('carTarget').value,
-                status: "OPEN"
+                status: document.getElementById('carStatus').value,
+                photoName: pendingPhotoFile ? pendingPhotoFile.name : (existing?.photoName || "")
             };
-            carParData.unshift(newCar);
+
+            pendingPhotoFile = null;
+            if (isEdit) {
+                carParData[editIndex] = record;
+                showToast("CAR/PAR record updated!");
+            } else {
+                carParData.unshift(record);
+                showToast("CAR/PAR successfully registered!");
+            }
             saveAllData();
-            renderCarParTable();
             closeModal();
-            showToast("CAR/PAR successfully registered!");
         }
 
-        function toggleCarStatus(ref) {
-            const item = carParData.find(c => c.ref === ref);
+        function deleteCarPar(index) {
+            const item = carParData[index];
             if (!item) return;
-            if (item.status === 'OPEN') item.status = 'IN_PROGRESS';
-            else if (item.status === 'IN_PROGRESS') item.status = 'CLOSED';
-            else item.status = 'OPEN';
-            saveAllData();
-            renderCarParTable();
-            showToast(`Status updated for ${ref}`);
+            requestSecureDelete("CAR/PAR", `${item.ref} - ${item.zone}`, item, () => {
+                carParData.splice(index, 1);
+                showToast("CAR/PAR entry moved to Recovery Vault.");
+            });
         }
 
-        // --- UAUC LOGIC ---
+        // --- UAUC LOGIC (ADD, EDIT, DELETE + PHOTO ATTACHMENT) ---
         function renderUaucTable() {
             const tbody = document.getElementById('uaucTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
-            uaucData.forEach(item => {
+            uaucData.forEach((item, index) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="p-3 text-xs text-slate-500">${item.date}</td>
@@ -1198,146 +2078,280 @@
                     <td class="p-3 text-slate-700">${item.observation}</td>
                     <td class="p-3 text-slate-600 text-xs">${item.immediateAction}</td>
                     <td class="p-3 font-medium">${item.reporter}</td>
+                    <td class="p-3 text-center">${renderPhotoBadge(item.photoName, item.category)}</td>
                     <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 text-slate-800 text-xs font-bold rounded">${item.risk}</span></td>
-                    <td class="p-3 text-right"><span class="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">${item.status}</span></td>
+                    <td class="p-3 text-center"><span class="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">${item.status}</span></td>
+                    <td class="p-3 text-right whitespace-nowrap space-x-1">
+                        <button onclick="openUaucModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit
+                        </button>
+                        <button onclick="deleteUauc(${index})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        function openAddUaucModal() {
+        function openUaucModal(editIndex = null) {
+            pendingPhotoFile = null;
+            const isEdit = editIndex !== null && uaucData[editIndex];
+            const item = isEdit ? uaucData[editIndex] : {
+                date: new Date().toISOString().split('T')[0],
+                category: "Unsafe Act",
+                zone: ZONES_DATA[0].name,
+                observation: "",
+                immediateAction: "",
+                reporter: currentUser.name,
+                risk: "MEDIUM",
+                status: "In Progress",
+                photoName: ""
+            };
+
             openModal(`
-                <h3 class="text-lg font-bold text-slate-900 mb-4">Log UAUC Incident / Finding</h3>
-                <form onsubmit="saveUauc(event)" class="space-y-3">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? 'Edit UAUC Report' : 'Log UAUC Incident / Finding'}</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form onsubmit="saveUauc(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Category</label>
                             <select id="uaucCategory" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                                <option>Unsafe Act</option>
-                                <option>Unsafe Condition</option>
+                                <option ${item.category === 'Unsafe Act' ? 'selected' : ''}>Unsafe Act</option>
+                                <option ${item.category === 'Unsafe Condition' ? 'selected' : ''}>Unsafe Condition</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
-                            <select id="uaucZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                                ${ZONES_DATA.map(z => `<option>${z.name}</option>`).join('')}
-                            </select>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Date</label>
+                            <input type="date" id="uaucDate" required value="${item.date}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                         </div>
                     </div>
                     <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
+                        <select id="uaucZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            ${ZONES_DATA.map(z => `<option ${item.zone === z.name ? 'selected' : ''}>${z.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Observed Hazard / Finding</label>
-                        <textarea id="uaucObs" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2"></textarea>
+                        <textarea id="uaucObs" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2">${item.observation}</textarea>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Immediate Action Taken</label>
-                        <input type="text" id="uaucAction" required class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        <input type="text" id="uaucAction" required value="${item.immediateAction}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                     </div>
-                    <button type="submit" class="w-full py-2.5 bg-indigo-600 text-white font-bold rounded-xl text-sm">Submit UAUC Report</button>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Risk Level</label>
+                            <select id="uaucRisk" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option ${item.risk === 'LOW' ? 'selected' : ''}>LOW</option>
+                                <option ${item.risk === 'MEDIUM' ? 'selected' : ''}>MEDIUM</option>
+                                <option ${item.risk === 'HIGH' ? 'selected' : ''}>HIGH</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                            <select id="uaucStatus" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option ${item.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                <option ${item.status === 'Closed' ? 'selected' : ''}>Closed</option>
+                            </select>
+                        </div>
+                    </div>
+                    ${getPhotoInputHtml(item.photoName)}
+                    <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm">
+                        ${isEdit ? 'Update UAUC Report' : 'Submit UAUC Report'}
+                    </button>
                 </form>
             `);
         }
 
-        function saveUauc(e) {
+        function saveUauc(e, editIndex) {
             e.preventDefault();
-            uaucData.unshift({
-                date: new Date().toISOString().split('T')[0],
+            const isEdit = editIndex !== null && editIndex !== undefined;
+            const existing = isEdit ? uaucData[editIndex] : null;
+
+            const record = {
+                id: isEdit ? existing.id : `UAUC-${Date.now()}`,
+                date: document.getElementById('uaucDate').value,
                 category: document.getElementById('uaucCategory').value,
                 zone: document.getElementById('uaucZone').value,
                 observation: document.getElementById('uaucObs').value,
                 immediateAction: document.getElementById('uaucAction').value,
-                reporter: currentUser.name,
-                risk: "MEDIUM",
-                status: "Closed"
-            });
+                reporter: isEdit ? existing.reporter : currentUser.name,
+                risk: document.getElementById('uaucRisk').value,
+                status: document.getElementById('uaucStatus').value,
+                photoName: pendingPhotoFile ? pendingPhotoFile.name : (existing?.photoName || "")
+            };
+
+            pendingPhotoFile = null;
+            if (isEdit) {
+                uaucData[editIndex] = record;
+                showToast("UAUC Report updated!");
+            } else {
+                uaucData.unshift(record);
+                showToast("UAUC Observation recorded!");
+            }
             saveAllData();
-            renderUaucTable();
             closeModal();
-            showToast("UAUC Observation recorded!");
         }
 
-        // --- ACCIDENT REPORTING LOGIC ---
+        function deleteUauc(index) {
+            const item = uaucData[index];
+            if (!item) return;
+            requestSecureDelete("UAUC", `${item.category} (${item.date})`, item, () => {
+                uaucData.splice(index, 1);
+                showToast("UAUC Report moved to Recovery Vault.");
+            });
+        }
+
+        // --- ACCIDENT REPORTING LOGIC (WITH PHOTO ATTACHMENT + EDIT/DELETE) ---
         function renderAccidentTable() {
             const tbody = document.getElementById('accidentTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
-            accidentData.forEach(item => {
+            accidentData.forEach((item, index) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="p-3 font-bold text-slate-900">${item.id}</td>
                     <td class="p-3 text-xs text-slate-500">${item.datetime}</td>
                     <td class="p-3 font-semibold text-rose-600">${item.type}</td>
-                    <td class="p-3">${item.zone}</td>
+                    <td class="p-3 text-xs">${item.zone}</td>
                     <td class="p-3 text-slate-700">${item.person}</td>
                     <td class="p-3 text-xs text-slate-500">${item.cause}</td>
+                    <td class="p-3 text-center">${renderPhotoBadge(item.photoName, item.id)}</td>
                     <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-bold rounded">${item.dosh}</span></td>
-                    <td class="p-3 text-right"><span class="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">${item.status}</span></td>
+                    <td class="p-3 text-right whitespace-nowrap space-x-1">
+                        <button onclick="openAccidentModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit
+                        </button>
+                        <button onclick="deleteAccident(${index})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        function openAddAccidentModal() {
+        function openAccidentModal(editIndex = null) {
+            pendingPhotoFile = null;
+            const isEdit = editIndex !== null && accidentData[editIndex];
+            const item = isEdit ? accidentData[editIndex] : {
+                id: `INC-2026-00${accidentData.length + 4}`,
+                datetime: `${new Date().toISOString().split('T')[0]} 10:00`,
+                type: "First Aid Case",
+                zone: ZONES_DATA[0].name,
+                person: "",
+                cause: "",
+                dosh: "Pending Review",
+                status: "Open",
+                photoName: ""
+            };
+
             openModal(`
-                <h3 class="text-lg font-bold text-slate-900 mb-4">Report Workplace Incident</h3>
-                <form onsubmit="saveAccident(event)" class="space-y-3">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? `Edit Incident ${item.id}` : 'Report Workplace Incident'}</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form onsubmit="saveAccident(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Incident Type</label>
                             <select id="accType" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                                <option>First Aid Case</option>
-                                <option>Near Miss</option>
-                                <option>Lost Time Injury (LTI)</option>
-                                <option>Medical Treatment Case</option>
+                                <option ${item.type === 'First Aid Case' ? 'selected' : ''}>First Aid Case</option>
+                                <option ${item.type === 'Near Miss' ? 'selected' : ''}>Near Miss</option>
+                                <option ${item.type === 'Lost Time Injury (LTI)' ? 'selected' : ''}>Lost Time Injury (LTI)</option>
+                                <option ${item.type === 'Medical Treatment Case' ? 'selected' : ''}>Medical Treatment Case</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Zone</label>
-                            <select id="accZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                                ${ZONES_DATA.map(z => `<option>${z.name}</option>`).join('')}
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">DOSH Report Status</label>
+                            <select id="accDosh" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option ${item.dosh === 'Pending Review' ? 'selected' : ''}>Pending Review</option>
+                                <option ${item.dosh === 'JKKP 6 Submitted' ? 'selected' : ''}>JKKP 6 Submitted</option>
+                                <option ${item.dosh === 'Not Required' ? 'selected' : ''}>Not Required</option>
                             </select>
                         </div>
                     </div>
                     <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Zone</label>
+                        <select id="accZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            ${ZONES_DATA.map(z => `<option ${item.zone === z.name ? 'selected' : ''}>${z.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Injured Person & Brief Description</label>
-                        <input type="text" id="accPerson" required class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        <input type="text" id="accPerson" required value="${item.person}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Root Cause Analysis</label>
-                        <textarea id="accCause" required class="w-full p-2 border border-slate-300 rounded-xl text-sm" rows="2"></textarea>
+                        <textarea id="accCause" required class="w-full p-2 border border-slate-300 rounded-xl text-sm" rows="2">${item.cause}</textarea>
                     </div>
-                    <button type="submit" class="w-full py-2.5 bg-rose-600 text-white font-bold rounded-xl text-sm">Log Accident Incident</button>
+                    ${getPhotoInputHtml(item.photoName)}
+                    <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm">
+                        ${isEdit ? 'Update Incident Report' : 'Log Accident Incident'}
+                    </button>
                 </form>
             `);
         }
 
-        function saveAccident(e) {
+        function saveAccident(e, editIndex) {
             e.preventDefault();
-            accidentData.unshift({
-                id: `INC-2026-00${accidentData.length + 4}`,
-                datetime: `${new Date().toISOString().split('T')[0]} 10:00`,
+            const isEdit = editIndex !== null && editIndex !== undefined;
+            const existing = isEdit ? accidentData[editIndex] : null;
+
+            const record = {
+                id: isEdit ? existing.id : `INC-2026-00${accidentData.length + 4}`,
+                datetime: isEdit ? existing.datetime : `${new Date().toISOString().split('T')[0]} 10:00`,
                 type: document.getElementById('accType').value,
                 zone: document.getElementById('accZone').value,
                 person: document.getElementById('accPerson').value,
                 cause: document.getElementById('accCause').value,
-                dosh: "Pending Review",
-                status: "Open"
-            });
+                dosh: document.getElementById('accDosh').value,
+                status: isEdit ? existing.status : "Open",
+                photoName: pendingPhotoFile ? pendingPhotoFile.name : (existing?.photoName || "")
+            };
+
+            pendingPhotoFile = null;
+            if (isEdit) {
+                accidentData[editIndex] = record;
+                showToast("Accident report updated!");
+            } else {
+                accidentData.unshift(record);
+                showToast("Incident logged for HSE review!");
+            }
             saveAllData();
-            renderAccidentTable();
             closeModal();
-            showToast("Incident logged for HSE review!");
+        }
+
+        function deleteAccident(index) {
+            const item = accidentData[index];
+            if (!item) return;
+            requestSecureDelete("Accident", `${item.id} - ${item.person}`, item, () => {
+                accidentData.splice(index, 1);
+                showToast("Incident report moved to Recovery Vault.");
+            });
         }
 
         // --- ADMIN SETTINGS HUB ---
         function renderAdminZoneOptions() {
             const select = document.getElementById('adminZoneSelect');
+            if (!select) return;
+            const currentVal = select.value;
             select.innerHTML = ZONES_DATA.map(z => `<option value="${z.id}">${z.name}</option>`).join('');
+            if (currentVal) select.value = currentVal;
             loadAdminZoneParameters();
         }
 
         function loadAdminZoneParameters() {
-            const zoneId = document.getElementById('adminZoneSelect').value;
+            const select = document.getElementById('adminZoneSelect');
+            if (!select) return;
+            const zoneId = select.value;
             const zone = ZONES_DATA.find(z => z.id === zoneId);
             const container = document.getElementById('adminParamList');
+            if (!container) return;
             container.innerHTML = '';
 
             if (zone && zone.parameters.length > 0) {
@@ -1368,25 +2382,24 @@
                 zone.parameters.push({ name: name, criteria: "Standard HSE Compliance" });
                 document.getElementById('newParamName').value = '';
                 saveAllData();
-                loadAdminZoneParameters();
-                renderZonesGrid();
                 showToast("Parameter added successfully!");
             }
         }
 
         function removeParam(zoneId, idx) {
             const zone = ZONES_DATA.find(z => z.id === zoneId);
-            if (zone) {
-                zone.parameters.splice(idx, 1);
-                saveAllData();
-                loadAdminZoneParameters();
-                renderZonesGrid();
-                showToast("Parameter removed!");
+            if (zone && zone.parameters[idx]) {
+                const param = zone.parameters[idx];
+                requestSecureDelete("Zone Parameter", `${param.name} (${zone.name})`, { zoneId, param }, () => {
+                    zone.parameters.splice(idx, 1);
+                    showToast("Parameter moved to Recovery Vault!");
+                });
             }
         }
 
         function renderPersonnelList() {
             const list = document.getElementById('personnelList');
+            if (!list) return;
             list.innerHTML = '';
             personnelData.forEach(p => {
                 const li = document.createElement('li');
@@ -1411,26 +2424,26 @@
             document.getElementById('newPersonnelName').value = '';
             document.getElementById('newPersonnelRole').value = '';
             saveAllData();
-            renderPersonnelList();
             showToast("Personnel registered!");
         }
 
         // --- ALERT TABLE & CHARTS ---
         function renderAlertTable() {
             const tbody = document.getElementById('expiryAlertTable');
+            if (!tbody) return;
             tbody.innerHTML = '';
-            const expiring = fireExtinguishers.filter(f => f.status === 'EXPIRED_SOON' || f.status === 'DEFECT');
-            
-            expiring.forEach(item => {
+            fireExtinguishers.forEach((item, index) => {
+                if (item.status !== 'EXPIRED_SOON' && item.status !== 'DEFECT') return;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="p-4 font-bold text-slate-800">${item.id}</td>
                     <td class="p-4">${item.type}</td>
+                    <td class="p-4 font-mono text-xs">${item.mfgYear || '2022'}</td>
                     <td class="p-4 text-xs text-slate-600">${item.zone}</td>
                     <td class="p-4 text-rose-600 font-semibold text-xs">${item.expiry}</td>
                     <td class="p-4"><span class="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">Hydrostatic Test Due</span></td>
                     <td class="p-4 text-right">
-                        <button onclick="inspectExtinguisher('${item.id}')" class="px-3 py-1 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700">Schedule Test</button>
+                        <button onclick="openFireExtinguisherModal(${index})" class="px-3 py-1 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700">Inspect / Edit</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1438,7 +2451,6 @@
         }
 
         function initCharts() {
-            // Zone Compliance Bar Chart
             const ctxZone = document.getElementById('chartZoneCompliance').getContext('2d');
             new Chart(ctxZone, {
                 type: 'bar',
@@ -1458,7 +2470,6 @@
                 }
             });
 
-            // UAUC Distribution Doughnut Chart
             const ctxUauc = document.getElementById('chartUaucDistribution').getContext('2d');
             new Chart(ctxUauc, {
                 type: 'doughnut',
@@ -1481,9 +2492,11 @@
                 exportedAt: new Date().toISOString(),
                 zones: ZONES_DATA,
                 fireExtinguishers,
+                firePumps,
                 carParData,
                 uaucData,
                 accidentData,
+                zoneInspectionLogs,
                 personnelData
             };
             const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -1496,43 +2509,6 @@
             showToast("Downloaded KLSM HSE JSON Backup!");
         }
 
-        function downloadIndexHtmlFile() {
-            const clone = document.documentElement.cloneNode(true);
-
-            // Reset modal, toast, and screen visibility for a clean initial state
-            const modalOverlay = clone.querySelector('#modalOverlay');
-            if (modalOverlay) modalOverlay.classList.add('hidden');
-
-            const toastContainer = clone.querySelector('#toastContainer');
-            if (toastContainer) toastContainer.innerHTML = '';
-
-            const loginScreen = clone.querySelector('#loginScreen');
-            if (loginScreen) loginScreen.classList.remove('hidden');
-
-            const mainDashboard = clone.querySelector('#mainDashboard');
-            if (mainDashboard) mainDashboard.classList.add('hidden');
-
-            // Reset chart canvases so Chart.js initializes cleanly on load
-            const chartZone = clone.querySelector('#chartZoneCompliance');
-            if (chartZone && chartZone.parentNode) {
-                chartZone.parentNode.innerHTML = '<canvas id="chartZoneCompliance"></canvas>';
-            }
-            const chartUauc = clone.querySelector('#chartUaucDistribution');
-            if (chartUauc && chartUauc.parentNode) {
-                chartUauc.parentNode.innerHTML = '<canvas id="chartUaucDistribution"></canvas>';
-            }
-
-            const fullHtml = '<!DOCTYPE html>\n' + clone.outerHTML;
-            const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'index.html';
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast("Saved index.html to your Downloads folder!");
-        }
-
         function openPublishGuideModal() {
             openModal(`
                 <div class="space-y-4">
@@ -1542,7 +2518,7 @@
                                 <i class="fa-brands fa-github"></i>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-slate-900">GitHub Pages & Troubleshooting Guide</h3>
+                                <h3 class="text-lg font-bold text-slate-900">GitHub Pages & Multi-User Setup Guide</h3>
                                 <p class="text-xs text-slate-500">Publishing, Fixing Secret Alerts & Updating Your Live Site</p>
                             </div>
                         </div>
@@ -1550,43 +2526,23 @@
                     </div>
 
                     <div class="space-y-3 text-sm text-slate-700">
-                        <!-- Alert Troubleshooting Box -->
                         <div class="p-4 bg-rose-50 rounded-xl border border-rose-200 space-y-2">
                             <span class="font-bold text-rose-900 flex items-center gap-1.5">
                                 <i class="fa-solid fa-shield-virus text-rose-600"></i> Fix: "Google API Key Detected in index.html#L6"
                             </span>
                             <p class="text-xs text-rose-800 leading-relaxed">
-                                <strong>Why this happened:</strong> If you right-clicked the Preview window and clicked <em>"Save Page As"</em>, your browser automatically injected an internal preview script containing a temporary Google API key onto <strong>Line 6</strong>.
+                                Always copy code directly from the <strong>Code</strong> editor tab rather than right-clicking the Preview window ("Save Page As").
                             </p>
-                            <ol class="list-decimal list-inside text-xs text-rose-900 space-y-1 font-medium">
-                                <li>In GitHub, open your <code class="bg-rose-100 px-1 rounded">index.html</code> file and click the <strong>Pencil icon (Edit this file)</strong>.</li>
-                                <li>Look at <strong>Line 6</strong> (inside <code class="bg-rose-100 px-1 rounded">&lt;head&gt;</code>) and delete any <code class="bg-rose-100 px-1 rounded">&lt;script&gt;</code> tag that mentions <code class="bg-rose-100 px-1 rounded">AIza...</code> or Google API keys, then click <strong>Commit changes</strong>.</li>
-                                <li>To clear the email warning: Click the <strong>Security</strong> tab at the top of your GitHub repo &rarr; <strong>Secret scanning</strong> (left menu) &rarr; click the alert &rarr; click <strong>Close as &rarr; Used in tests / False positive</strong>.</li>
-                            </ol>
                         </div>
 
-                        <!-- Update Not Showing Box -->
                         <div class="p-4 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
                             <span class="font-bold text-blue-900 flex items-center gap-1.5">
                                 <i class="fa-solid fa-arrows-rotate text-blue-600"></i> Fix: Changes Not Showing on Live Page
                             </span>
                             <ul class="list-disc list-inside text-xs text-blue-900 space-y-1.5">
-                                <li><strong>1. Force a Hard Refresh (Most Common):</strong> Your browser caches the old page. Open your live site and press <strong>Ctrl + F5</strong> (Windows) or <strong>Cmd + Shift + R</strong> (Mac), or test in an <strong>Incognito Window</strong>.</li>
-                                <li><strong>2. Wait 1–2 Minutes for Build:</strong> Click the <strong>Actions</strong> tab at the top of your GitHub repository. Wait until the yellow circle next to <em>pages build and deployment</em> turns into a <strong>green checkmark</strong>.</li>
+                                <li><strong>Force a Hard Refresh:</strong> Press <strong>Ctrl + F5</strong> (Windows) or <strong>Cmd + Shift + R</strong> (Mac).</li>
+                                <li><strong>Wait 1–2 Minutes for Build:</strong> Check the <strong>Actions</strong> tab in your GitHub repository until the build shows a green checkmark.</li>
                             </ul>
-                        </div>
-
-                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                            <span class="font-bold text-slate-900 block mb-1">How to Change URL to <code class="px-1.5 py-0.5 bg-brand-100 text-brand-800 rounded text-xs">https://klsmhub.github.io</code></span>
-                            <p class="text-xs text-slate-600">Go to your GitHub profile <strong>Settings &rarr; Account &rarr; Change username</strong> and change <code class="bg-slate-200 px-1 rounded">thaddeus88</code> to <code class="bg-slate-200 px-1 rounded">klsmhub</code> (or create a free Organization named <code class="bg-slate-200 px-1 rounded">klsmhub</code> and transfer the repository there).</p>
-                        </div>
-
-                        <div class="p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900">
-                            <span class="font-bold block mb-1"><i class="fa-solid fa-database mr-1"></i> Important Note About Browser Storage</span>
-                            If you added zones, parameters, or fire extinguishers while testing the page, your browser saved them in <code class="font-mono">localStorage</code>. To see fresh default data from your updated code, click the button below to reset local browser cache.
-                            <button onclick="resetLocalCache()" class="mt-2 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs transition block">
-                                Reset Browser Saved Data
-                            </button>
                         </div>
                     </div>
 
@@ -1595,17 +2551,6 @@
                     </div>
                 </div>
             `);
-        }
-
-        function resetLocalCache() {
-            localStorage.removeItem('klsm_zones');
-            localStorage.removeItem('klsm_fe');
-            localStorage.removeItem('klsm_car');
-            localStorage.removeItem('klsm_uauc');
-            localStorage.removeItem('klsm_acc');
-            localStorage.removeItem('klsm_staff');
-            showToast("Browser cache cleared! Reloading...");
-            setTimeout(() => location.reload(), 800);
         }
 
         // --- UTILITY MODALS & TOASTS ---
@@ -1634,6 +2579,48 @@
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
+
+        // Expose functions to global window scope for inline HTML event handlers
+        Object.assign(window, {
+            handleLogin,
+            handleLogout,
+            switchTab,
+            startZoneInspection,
+            submitZoneInspection,
+            deleteZoneLog,
+            switchFireSubCategory,
+            filterExtinguishers,
+            openFireExtinguisherModal,
+            saveFireExtinguisher,
+            deleteFireExtinguisher,
+            openFirePumpModal,
+            saveFirePump,
+            deleteFirePump,
+            renderCarParTable,
+            openCarParModal,
+            saveCarPar,
+            deleteCarPar,
+            openUaucModal,
+            saveUauc,
+            deleteUauc,
+            openAccidentModal,
+            saveAccident,
+            deleteAccident,
+            loadAdminZoneParameters,
+            addZoneParameter,
+            removeParam,
+            addPersonnel,
+            exportDataReport,
+            openPublishGuideModal,
+            openModal,
+            closeModal,
+            handlePhotoSelect,
+            viewAttachedPhoto,
+            generateCaptchaCanvas,
+            confirmSecureDelete,
+            updateSecuritySettings,
+            restoreDeletedItem
+        });
     </script>
 </body>
 </html>
