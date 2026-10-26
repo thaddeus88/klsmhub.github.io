@@ -696,8 +696,8 @@
                                     </div>
 
                                     <div class="bg-white rounded-xl border border-slate-200 p-4">
-                                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Current Active Parameters for Selected Zone</h4>
-                                        <div id="adminParamList" class="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
+                                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Current Active Parameters & Sub-Parameters</h4>
+                                        <div id="adminParamList" class="space-y-3 max-h-[460px] overflow-y-auto custom-scrollbar pr-1">
                                             <!-- Dynamic items -->
                                         </div>
                                     </div>
@@ -1484,6 +1484,14 @@
             else if (entry.category === "Zone Parameter") {
                 const targetZone = ZONES_DATA.find(z => z.id === entry.payload.zoneId);
                 if (targetZone) targetZone.parameters.push(entry.payload.param);
+            } else if (entry.category === "Sub-Parameter") {
+                const targetZone = ZONES_DATA.find(z => z.id === entry.payload.zoneId);
+                if (targetZone && targetZone.parameters[entry.payload.paramIdx]) {
+                    if (!Array.isArray(targetZone.parameters[entry.payload.paramIdx].subParameters)) {
+                        targetZone.parameters[entry.payload.paramIdx].subParameters = [];
+                    }
+                    targetZone.parameters[entry.payload.paramIdx].subParameters.push(entry.payload.subName);
+                }
             }
 
             recycleBinData.splice(idx, 1);
@@ -1858,9 +1866,29 @@
                     } else if (d.status === 'NA') {
                         badge = `<span class="px-2 py-0.5 bg-slate-200 text-slate-700 text-[11px] font-bold rounded-full">N/A</span>`;
                     }
+
+                    const subDetailsHtml = Array.isArray(d.subDetails) && d.subDetails.length > 0
+                        ? `<div class="mt-1.5 pl-2.5 border-l-2 border-slate-200 space-y-1">
+                            ${d.subDetails.map((sub, sIdx) => {
+                                const subBadge = sub.status === 'Unsatisfactory'
+                                    ? `<span class="px-1.5 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded text-[10px] font-semibold">Unsatisfactory</span>`
+                                    : (sub.status === 'NA'
+                                        ? `<span class="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-semibold">N/A</span>`
+                                        : `<span class="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-semibold">Satisfactory</span>`);
+                                return `<div class="flex items-center justify-between gap-2 text-[11px] text-slate-600">
+                                    <span>${i + 1}.${sIdx + 1} ${sub.name}</span>
+                                    ${subBadge}
+                                </div>`;
+                            }).join('')}
+                           </div>`
+                        : '';
+
                     return `
                         <tr class="border-b border-slate-200 last:border-none">
-                            <td class="p-2.5 text-xs font-semibold text-slate-800">${i + 1}. ${d.name}</td>
+                            <td class="p-2.5 text-xs font-semibold text-slate-800">
+                                ${i + 1}. ${d.name}
+                                ${subDetailsHtml}
+                            </td>
                             <td class="p-2.5 text-xs text-slate-500">${d.criteria || '-'}</td>
                             <td class="p-2.5 text-center">${badge}</td>
                             <td class="p-2.5 text-xs text-slate-700">${d.remark || '-'}</td>
@@ -1942,7 +1970,7 @@
                     <div class="flex justify-between items-start">
                         <div>
                             <h3 class="text-lg font-bold text-slate-900">${zone.name}</h3>
-                            <p class="text-xs text-slate-500">Conduct detailed parameter evaluation. Any <strong>Unsatisfactory</strong> finding is automatically logged into Daily Findings & Non-Conformance.</p>
+                            <p class="text-xs text-slate-500">Conduct detailed parameter & sub-parameter evaluation. Any <strong>Unsatisfactory</strong> finding is automatically logged into Daily Findings & Non-Conformance.</p>
                         </div>
                         <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                     </div>
@@ -1951,6 +1979,32 @@
             `;
 
             zone.parameters.forEach((param, index) => {
+                const subParams = Array.isArray(param.subParameters) ? param.subParameters : [];
+                const subParamsHtml = subParams.length > 0
+                    ? `<div class="mt-2.5 pl-3 border-l-2 border-brand-200 space-y-2">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-brand-700 block">Sub-Parameters Checklist</span>
+                        ${subParams.map((subName, sIdx) => `
+                            <div class="p-2.5 bg-white rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <span class="text-xs font-medium text-slate-700">${index + 1}.${sIdx + 1} ${subName}</span>
+                                <div class="flex gap-3">
+                                    <label class="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 cursor-pointer">
+                                        <input type="radio" name="subparam_${index}_${sIdx}" value="Satisfactory" checked class="text-emerald-600">
+                                        Sat
+                                    </label>
+                                    <label class="flex items-center gap-1 text-[11px] font-semibold text-rose-700 cursor-pointer">
+                                        <input type="radio" name="subparam_${index}_${sIdx}" value="Unsatisfactory" class="text-rose-600">
+                                        Unsat
+                                    </label>
+                                    <label class="flex items-center gap-1 text-[11px] font-semibold text-slate-600 cursor-pointer">
+                                        <input type="radio" name="subparam_${index}_${sIdx}" value="NA" class="text-slate-600">
+                                        N/A
+                                    </label>
+                                </div>
+                            </div>
+                        `).join('')}
+                       </div>`
+                    : '';
+
                 html += `
                     <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                         <div class="flex justify-between items-start">
@@ -1973,6 +2027,7 @@
                                 N/A
                             </label>
                         </div>
+                        ${subParamsHtml}
                         <input type="text" id="paramRemark_${index}" placeholder="Remarks or corrective action required..." class="w-full mt-2 p-2 text-xs border border-slate-300 rounded-lg bg-white">
                     </div>
                 `;
@@ -2002,18 +2057,21 @@
 
             const today = new Date().toISOString().split('T')[0];
             let satCount = 0;
-            let totalCount = zone.parameters.length;
+            let totalCount = 0;
             let unsatCount = 0;
             const paramDetails = [];
 
             zone.parameters.forEach((param, idx) => {
                 const selected = document.querySelector(`input[name="param_${idx}"]:checked`)?.value || 'Satisfactory';
                 const remark = document.getElementById(`paramRemark_${idx}`)?.value?.trim() || '';
+                const subParams = Array.isArray(param.subParameters) ? param.subParameters : [];
+                const subDetails = [];
+
+                totalCount++;
                 if (selected === 'Satisfactory' || selected === 'NA') {
                     satCount++;
                 } else if (selected === 'Unsatisfactory') {
                     unsatCount++;
-                    // Automatically log Unsatisfactory finding into Daily Findings & UAUC table
                     uaucData.unshift({
                         id: `NC-${Date.now()}-${idx}`,
                         date: today,
@@ -2027,11 +2085,39 @@
                         photos: [...pendingPhotos]
                     });
                 }
+
+                subParams.forEach((subName, sIdx) => {
+                    const subSelected = document.querySelector(`input[name="subparam_${idx}_${sIdx}"]:checked`)?.value || 'Satisfactory';
+                    totalCount++;
+                    if (subSelected === 'Satisfactory' || subSelected === 'NA') {
+                        satCount++;
+                    } else if (subSelected === 'Unsatisfactory') {
+                        unsatCount++;
+                        uaucData.unshift({
+                            id: `NC-${Date.now()}-${idx}-${sIdx}`,
+                            date: today,
+                            category: "Non-Conformance (Unsatisfactory Finding)",
+                            zone: zone.name,
+                            observation: `[${param.name} - Sub: ${subName}] Unsatisfactory`,
+                            immediateAction: remark || "Sub-parameter logged during Zone Inspection for corrective action",
+                            reporter: currentUser.name,
+                            risk: "MEDIUM",
+                            status: "In Progress",
+                            photos: [...pendingPhotos]
+                        });
+                    }
+                    subDetails.push({
+                        name: subName,
+                        status: subSelected
+                    });
+                });
+
                 paramDetails.push({
                     name: param.name,
                     criteria: param.criteria,
                     status: selected,
-                    remark: remark
+                    remark: remark,
+                    subDetails: subDetails
                 });
             });
 
@@ -3161,16 +3247,42 @@
 
             list.innerHTML = '';
             zone.parameters.forEach((param, idx) => {
+                if (!Array.isArray(param.subParameters)) {
+                    param.subParameters = [];
+                }
+
+                const subListHtml = param.subParameters.length > 0
+                    ? `<div class="mt-2 pl-3 border-l-2 border-brand-200 space-y-1.5">
+                        ${param.subParameters.map((sub, sIdx) => `
+                            <div class="flex justify-between items-center bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 text-[11px]">
+                                <span class="text-slate-700 font-medium"><i class="fa-solid fa-turn-up fa-rotate-90 text-brand-500 mr-1.5 text-[10px]"></i>${idx + 1}.${sIdx + 1} ${sub}</span>
+                                <button type="button" onclick="removeSubParameter('${zone.id}', ${idx}, ${sIdx})" class="text-rose-400 hover:text-rose-600 px-1" title="Remove Sub-Parameter">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        `).join('')}
+                       </div>`
+                    : `<p class="text-[11px] text-slate-400 italic mt-1.5 pl-2">No sub-parameters added yet.</p>`;
+
                 const div = document.createElement('div');
-                div.className = "flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs";
+                div.className = "p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2";
                 div.innerHTML = `
-                    <div>
-                        <span class="font-bold text-slate-800 block">${param.name}</span>
-                        <span class="text-slate-500 text-[11px]">${param.criteria}</span>
+                    <div class="flex justify-between items-start gap-2">
+                        <div>
+                            <span class="font-bold text-slate-800 block">${idx + 1}. ${param.name}</span>
+                            <span class="text-slate-500 text-[11px]">${param.criteria}</span>
+                        </div>
+                        <button type="button" onclick="removeParam('${zone.id}', ${idx})" class="text-rose-500 hover:text-rose-700 p-1" title="Remove Parameter">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
                     </div>
-                    <button type="button" onclick="removeParam('${zone.id}', ${idx})" class="text-rose-500 hover:text-rose-700 p-1" title="Remove Parameter">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    ${subListHtml}
+                    <div class="flex gap-1.5 pt-1">
+                        <input type="text" id="newSubParam_${zone.id}_${idx}" onkeydown="if(event.key==='Enter'){event.preventDefault();addSubParameter('${zone.id}', ${idx});}" placeholder="Add sub-parameter..." class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-[11px] focus:ring-1 focus:ring-brand-500">
+                        <button type="button" onclick="addSubParameter('${zone.id}', ${idx})" class="px-2.5 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 font-semibold rounded-lg text-[11px] whitespace-nowrap transition">
+                            + Sub-Param
+                        </button>
+                    </div>
                 `;
                 list.appendChild(div);
             });
@@ -3178,15 +3290,49 @@
 
         function addZoneParameter() {
             const zoneId = document.getElementById('adminZoneSelect').value;
-            const name = document.getElementById('newParamName').value;
+            const name = document.getElementById('newParamName').value.trim();
             if (!name) return;
 
             const zone = ZONES_DATA.find(z => z.id === zoneId);
             if (zone) {
-                zone.parameters.push({ name: name, criteria: "Standard HSE Compliance" });
+                zone.parameters.push({ name: name, criteria: "Standard HSE Compliance", subParameters: [] });
                 document.getElementById('newParamName').value = '';
                 saveAllData();
                 showToast("Parameter added successfully!");
+            }
+        }
+
+        function addSubParameter(zoneId, paramIdx) {
+            const input = document.getElementById(`newSubParam_${zoneId}_${paramIdx}`);
+            const subName = input?.value?.trim();
+            if (!subName) return;
+
+            const zone = ZONES_DATA.find(z => z.id === zoneId);
+            if (zone && zone.parameters[paramIdx]) {
+                if (!Array.isArray(zone.parameters[paramIdx].subParameters)) {
+                    zone.parameters[paramIdx].subParameters = [];
+                }
+                zone.parameters[paramIdx].subParameters.push(subName);
+                input.value = '';
+                saveAllData();
+                showToast(`Sub-parameter added under "${zone.parameters[paramIdx].name}"!`);
+            }
+        }
+
+        function removeSubParameter(zoneId, paramIdx, subIdx) {
+            const zone = ZONES_DATA.find(z => z.id === zoneId);
+            if (zone && zone.parameters[paramIdx] && Array.isArray(zone.parameters[paramIdx].subParameters)) {
+                const subName = zone.parameters[paramIdx].subParameters[subIdx];
+                if (!subName) return;
+                requestSecureDelete(
+                    "Sub-Parameter",
+                    `${subName} (under ${zone.parameters[paramIdx].name})`,
+                    { zoneId, paramIdx, subName },
+                    () => {
+                        zone.parameters[paramIdx].subParameters.splice(subIdx, 1);
+                        showToast("Sub-parameter moved to Recovery Vault!");
+                    }
+                );
             }
         }
 
@@ -3707,6 +3853,8 @@
             deleteAccident,
             loadAdminZoneParameters,
             addZoneParameter,
+            addSubParameter,
+            removeSubParameter,
             removeParam,
             savePersonnel,
             editPersonnel,
