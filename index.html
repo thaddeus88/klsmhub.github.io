@@ -63,52 +63,69 @@
         </div>
     </div>
 
-    <!-- MAIN APP WRAPPER -->
-    <div id="app" class="min-h-screen flex flex-col">
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="flex-1 flex flex-col">
 
-        <!-- 1. LOGIN SCREEN -->
-        <section id="loginScreen" class="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900">
-            <div class="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                <!-- Left: Sign In Card -->
-                <div class="lg:col-span-5 bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-white/20 flex flex-col justify-between">
+        <!-- LOGIN SCREEN -->
+        <section id="loginScreen" class="flex-1 flex items-center justify-center p-3 sm:p-6 bg-gradient-to-br from-slate-900 via-brand-900 to-slate-800">
+            <div class="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                <!-- Left: Sign-In Form & Public UAUC -->
+                <div class="lg:col-span-5 bg-white/95 backdrop-blur-md p-6 sm:p-8 rounded-2xl shadow-2xl border border-white/20 flex flex-col justify-between">
                     <div>
-                        <div class="text-center mb-8">
-                            <div class="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-500/30 text-white text-2xl font-bold">
-                                <i class="fa-solid fa-clipboard-check"></i>
+                        <div class="text-center mb-6">
+                            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-600 text-white text-2xl font-bold shadow-lg shadow-brand-500/30 mb-3">
+                                <i class="fa-solid fa-shield-halved"></i>
                             </div>
-                            <h1 class="text-2xl font-bold text-slate-900">KLSM Inspection Hub</h1>
-                            <p class="text-slate-500 text-sm mt-1">Health, Safety & Environment Management</p>
+                            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">KLSM Inspection Hub</h1>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-1">Safety, Environment & Operational Compliance</p>
                         </div>
 
-                        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5">
+                        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
                             <!-- Invisible Bot Honeypot -->
                             <input type="text" id="loginBotHoneypot" class="hidden" tabindex="-1" autocomplete="off">
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Select Role</label>
-                                <select id="loginRole" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white transition">
-                                    <option value="Inspector">Safety Inspector / Personnel</option>
-                                    <option value="Admin">HSE Manager / Admin</option>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Select Personnel Name</label>
+                                <select id="loginUsername" required onchange="updateLoginPersonnelHint()" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white transition text-sm">
+                                    <!-- Dynamically populated from Personnel Management -->
                                 </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Username / ID</label>
-                                <input type="text" id="loginUsername" required value="inspector_klsm" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition" placeholder="Enter employee ID">
+                                <p id="loginPersonnelMeta" class="text-[11px] text-slate-500 mt-1.5"></p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
-                                <input type="password" required value="••••••••" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition" placeholder="Password">
+                                <input type="password" id="loginPassword" required value="1234" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition text-sm" placeholder="Enter your password">
                             </div>
-                            <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-lg shadow-brand-600/30 transition duration-200">
-                                Sign In to Hub
+                            <button type="submit" class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-semibold rounded-xl shadow-lg shadow-brand-600/30 transition duration-200 text-sm">
+                                <i class="fa-solid fa-right-to-bracket mr-1.5"></i> Sign In to Hub
                             </button>
                         </form>
+
+                        <!-- Public UAUC Quick Reporting Action (No Login Required) -->
+                        <div class="mt-5 pt-5 border-t border-slate-200">
+                            <div class="p-3.5 rounded-xl bg-indigo-50/90 border border-indigo-200/80 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-triangle-exclamation text-indigo-600"></i> Spot a Hazard? (Public Access)
+                                    </span>
+                                    <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-full">No Login Needed</span>
+                                </div>
+                                <p class="text-[11px] text-indigo-800 leading-relaxed">All mill personnel & visitors can immediately submit an Unsafe Act / Unsafe Condition (UAUC) report with photo evidence.</p>
+                                <button type="button" onclick="openPublicUaucModal()" class="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-semibold rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-xs">
+                                    <i class="fa-solid fa-camera"></i> Submit Instant UAUC Report
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="mt-6 pt-6 border-t border-slate-200 flex flex-col items-center gap-3 text-center text-xs text-slate-400">
-                        <span>KLSM Palm Oil Mill Safety Portal &bull; Version 2.5</span>
-                        <button type="button" onclick="openPublishGuideModal()" class="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-2 text-xs">
-                            <i class="fa-brands fa-github text-base"></i> GitHub Publish & Troubleshooting Guide
-                        </button>
+                    <div class="mt-5 pt-4 border-t border-slate-200 flex flex-col items-center gap-2.5 text-center text-xs text-slate-400">
+                        <span>KLSM Palm Oil Mill Safety Portal &bull; Version 3.0 (Mobile Ready)</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                            <button type="button" onclick="openFirebaseSetupModal()" class="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 text-xs">
+                                <i class="fa-solid fa-cloud-bolt text-amber-600"></i> Link Firebase Cloud
+                            </button>
+                            <button type="button" onclick="openPublishGuideModal()" class="w-full py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 text-xs">
+                                <i class="fa-brands fa-github text-sm"></i> GitHub Guide
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -180,25 +197,25 @@
                         </div>
 
                         <!-- User Profile & Navigation -->
-                        <div class="flex items-center space-x-2 sm:space-x-4">
-                            <div id="securityShieldBadge" class="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold rounded-xl hidden sm:flex items-center gap-1.5" title="Anti-Bot CAPTCHA & PIN Protection Active">
+                        <div class="flex items-center space-x-1.5 sm:space-x-3">
+                            <div id="securityShieldBadge" class="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold rounded-xl hidden lg:flex items-center gap-1.5" title="Anti-Bot CAPTCHA & PIN Protection Active">
                                 <i class="fa-solid fa-lock text-indigo-600"></i>
-                                <span>Anti-Bot Delete Guard</span>
+                                <span>Anti-Bot Guard</span>
                             </div>
-                            <div id="cloudStatusBadge" class="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <span id="cloudStatusText">Multi-User Sync</span>
-                            </div>
-                            <button onclick="openPublishGuideModal()" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-sm" title="How to Publish to GitHub">
+                            <button onclick="openFirebaseSetupModal()" id="cloudStatusBadge" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition" title="Click to configure Firebase Cloud Link">
+                                <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span id="cloudStatusText" class="text-[11px] sm:text-xs">Multi-User Sync</span>
+                            </button>
+                            <button onclick="openPublishGuideModal()" class="p-2 sm:px-3 sm:py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shadow-sm" title="How to Publish to GitHub & Link Firebase">
                                 <i class="fa-brands fa-github text-sm"></i>
-                                <span class="hidden md:inline">Publish Guide</span>
+                                <span class="hidden md:inline">Setup Guide</span>
                             </button>
                             <div class="text-right hidden sm:block">
                                 <p id="navUserName" class="text-sm font-semibold text-slate-800">John Doe</p>
                                 <p id="navUserRole" class="text-xs text-brand-600 font-medium">Safety Inspector</p>
                                 <p id="navUserId" class="text-[10px] text-slate-400 font-mono">UID: connecting...</p>
                             </div>
-                            <button onclick="handleLogout()" class="p-2 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition" title="Logout">
+                            <button onclick="handleLogout()" class="p-2.5 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition" title="Logout">
                                 <i class="fa-solid fa-right-from-bracket text-lg"></i>
                             </button>
                         </div>
@@ -636,12 +653,12 @@
 
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             <!-- Left: Zone Parameter Management -->
-                            <div class="lg:col-span-2 space-y-4">
+                            <div class="lg:col-span-1 space-y-4">
                                 <div class="border border-slate-200 rounded-xl p-4 bg-slate-50">
                                     <h3 class="font-bold text-slate-800 mb-2">Zone Inspection Parameter Manager</h3>
                                     <p class="text-xs text-slate-500 mb-4">Select a zone to add or edit parameters and sub-parameters.</p>
 
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                    <div class="space-y-3 mb-4">
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-600 mb-1">Select Target Zone</label>
                                             <select id="adminZoneSelect" onchange="loadAdminZoneParameters()" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-sm">
@@ -652,7 +669,7 @@
                                             <label class="block text-xs font-semibold text-slate-600 mb-1">Add New Parameter Name</label>
                                             <div class="flex gap-2">
                                                 <input type="text" id="newParamName" placeholder="e.g. Eyewash Station Check" class="w-full p-2.5 bg-white border border-slate-300 rounded-xl text-sm">
-                                                <button onclick="addZoneParameter()" class="px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl">Add</button>
+                                                <button onclick="addZoneParameter()" class="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl">Add</button>
                                             </div>
                                         </div>
                                     </div>
@@ -666,25 +683,102 @@
                                 </div>
                             </div>
 
-                            <!-- Right: Personnel Management -->
-                            <div class="space-y-4">
-                                <div class="border border-slate-200 rounded-xl p-4 bg-slate-50">
-                                    <h3 class="font-bold text-slate-800 mb-2">Personnel Management</h3>
-                                    <p class="text-xs text-slate-500 mb-4">Manage registered inspectors and safety managers.</p>
-
-                                    <div class="space-y-3 mb-4">
-                                        <input type="text" id="newPersonnelName" placeholder="Staff Name" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white">
-                                        <input type="text" id="newPersonnelRole" placeholder="Role / Department (e.g., Boiler Eng.)" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white">
-                                        <button onclick="addPersonnel()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm">
-                                            Register Personnel
-                                        </button>
+                            <!-- Right: Comprehensive 8-Field Personnel Management -->
+                            <div class="lg:col-span-2 space-y-4">
+                                <div class="border border-slate-200 rounded-xl p-4 sm:p-5 bg-slate-50">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                                        <div>
+                                            <h3 class="font-bold text-slate-800">Personnel & Duty Schedule Management</h3>
+                                            <p class="text-xs text-slate-500">Manage staff credentials, target inspection frequencies, offdays, assigned zones, and time windows.</p>
+                                        </div>
+                                        <span id="personnelCountBadge" class="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full self-start sm:self-center">0 Registered</span>
                                     </div>
 
-                                    <div class="bg-white rounded-xl border border-slate-200 p-3">
-                                        <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Active Staff List</h4>
-                                        <ul id="personnelList" class="divide-y divide-slate-100 text-xs">
-                                            <!-- Dynamic staff rows -->
-                                        </ul>
+                                    <!-- 8-Field Personnel Registration / Edit Form -->
+                                    <form id="personnelForm" onsubmit="savePersonnel(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                                        <input type="hidden" id="editPersonnelIndex" value="">
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">1. Personnel Name</label>
+                                            <input type="text" id="newPersonnelName" required placeholder="e.g. Ahmad Rizwan" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">2. Role</label>
+                                            <select id="newPersonnelRole" required class="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white">
+                                                <option value="Inspector">Inspector</option>
+                                                <option value="Admin">Admin</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">3. Target Frequency</label>
+                                            <input type="number" id="newPersonnelTargetFreq" required min="1" max="31" value="2" placeholder="e.g. 2 times" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">4. Frequency Period</label>
+                                            <select id="newPersonnelFreqPeriod" required class="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white">
+                                                <option value="Weekly">Weekly</option>
+                                                <option value="Monthly">Monthly</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">5. Login Password</label>
+                                            <input type="text" id="newPersonnelPassword" required value="1234" placeholder="Set password" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white font-mono">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">6. Offday</label>
+                                            <select id="newPersonnelOffday" required class="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white">
+                                                <option value="Sunday">Sunday</option>
+                                                <option value="Monday">Monday</option>
+                                                <option value="Tuesday">Tuesday</option>
+                                                <option value="Wednesday">Wednesday</option>
+                                                <option value="Thursday">Thursday</option>
+                                                <option value="Friday">Friday</option>
+                                                <option value="Saturday">Saturday</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">7. Assigned Zone</label>
+                                            <select id="newPersonnelZone" required class="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white">
+                                                <!-- Populated dynamically with all 9 zones -->
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">8. Inspection Time Window</label>
+                                            <input type="text" id="newPersonnelWindow" required value="08:00 - 12:00" placeholder="e.g. 08:00 - 12:00" class="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white">
+                                        </div>
+                                        <div class="sm:col-span-2 lg:col-span-4 flex justify-end gap-2 pt-2 border-t border-slate-100">
+                                            <button type="button" id="cancelEditPersonnelBtn" onclick="resetPersonnelForm()" class="hidden px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl">
+                                                Cancel Edit
+                                            </button>
+                                            <button type="submit" id="savePersonnelBtn" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1.5">
+                                                <i class="fa-solid fa-user-plus"></i> <span id="savePersonnelBtnText">Register Personnel</span>
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                                        <div class="p-3 bg-slate-100 border-b border-slate-200 flex justify-between items-center">
+                                            <h4 class="text-xs font-bold text-slate-700 uppercase">Active Personnel Directory & Roster</h4>
+                                            <span class="text-[11px] text-slate-500">Synced with Login Dropdown</span>
+                                        </div>
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-left text-xs">
+                                                <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-[11px]">
+                                                    <tr>
+                                                        <th class="p-2.5">Name</th>
+                                                        <th class="p-2.5">Role</th>
+                                                        <th class="p-2.5">Target Frequency</th>
+                                                        <th class="p-2.5">Assigned Zone</th>
+                                                        <th class="p-2.5">Offday</th>
+                                                        <th class="p-2.5">Time Window</th>
+                                                        <th class="p-2.5">Password</th>
+                                                        <th class="p-2.5 text-right">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="personnelList" class="divide-y divide-slate-200">
+                                                    <!-- Dynamic staff rows -->
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -870,47 +964,90 @@
         ];
 
         let personnelData = [
-            { name: "John Doe", role: "Lead Safety Inspector", dept: "HSE Dept" },
-            { name: "Ahmad Rizwan", role: "Boiler Engineer", dept: "Engineering" },
-            { name: "Siti Nurhaliza", role: "Chemist", dept: "Laboratory" }
+            {
+                name: "John Doe",
+                role: "Admin",
+                targetFrequency: "4",
+                frequencyPeriod: "Monthly",
+                password: "1234",
+                offday: "Sunday",
+                assignedZone: "All Zones (HSE Manager)",
+                timeWindow: "08:00 - 17:00"
+            },
+            {
+                name: "Ahmad Rizwan",
+                role: "Inspector",
+                targetFrequency: "2",
+                frequencyPeriod: "Weekly",
+                password: "1234",
+                offday: "Sunday",
+                assignedZone: "Zone 3 – Boiler, Engine Room & RO Water Treatment",
+                timeWindow: "08:30 - 11:30"
+            },
+            {
+                name: "Siti Nurhaliza",
+                role: "Inspector",
+                targetFrequency: "1",
+                frequencyPeriod: "Weekly",
+                password: "1234",
+                offday: "Saturday",
+                assignedZone: "Zone 1 – Laboratory, CPO Despatch, Oil Storage Tank & FFB Grading",
+                timeWindow: "09:00 - 12:00"
+            },
+            {
+                name: "Maniam K.",
+                role: "Inspector",
+                targetFrequency: "2",
+                frequencyPeriod: "Weekly",
+                password: "1234",
+                offday: "Sunday",
+                assignedZone: "Zone 2 – Workshop",
+                timeWindow: "14:00 - 16:30"
+            }
         ];
 
         // --- ANTI-BOT & DELETION SECURITY STATE ---
-        let securityConfig = {
-            deletePin: "1234",
-            adminOnlyDelete: false
-        };
+        let currentUser = { name: "John Doe", role: "Admin" };
+        let securityConfig = { deletePin: "1234", adminOnlyDelete: false };
         let recycleBinData = [];
         let activeCaptchaCode = "";
         let pendingDeleteAction = null;
         let deleteAttemptTimestamps = [];
         let botLockoutUntil = 0;
-
-        // Session Object URL cache for attached photos
-        const photoPreviewCache = {};
         let pendingPhotoFile = null;
-
-        let currentUser = { name: "John Doe", role: "Inspector" };
+        let photoPreviewCache = {};
         let db = null;
         let auth = null;
         let currentUserUid = null;
+        let customFirebaseConfig = null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'klsm-inspection-hub';
 
         // --- CLOUD FIRESTORE INITIALIZATION (MULTI-USER) ---
-        async function initCloudSync() {
+        async function initCloudSync(overrideConfig = null) {
             try {
-                if (typeof __firebase_config === 'undefined' || !__firebase_config) {
-                    document.getElementById('cloudStatusText').textContent = "Session Mode";
+                let rawConfig = overrideConfig;
+                if (!rawConfig && typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    rawConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
+                }
+                if (!rawConfig && window.__custom_firebase_config) {
+                    rawConfig = window.__custom_firebase_config;
+                }
+
+                if (!rawConfig || !rawConfig.apiKey || !rawConfig.projectId) {
+                    document.getElementById('cloudStatusText').textContent = "Setup Cloud Link";
+                    const dot = document.getElementById('cloudStatusDot');
+                    if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
                     document.getElementById('navUserId').textContent = "UID: local-session";
                     return;
                 }
-                const firebaseConfig = JSON.parse(__firebase_config);
-                const app = initializeApp(firebaseConfig);
+
+                customFirebaseConfig = rawConfig;
+                const app = initializeApp(rawConfig, "klsmApp_" + Date.now());
                 auth = getAuth(app);
                 db = getFirestore(app);
 
                 // RULE 3: Authenticate FIRST before any Firestore query
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token && !overrideConfig) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
@@ -919,6 +1056,8 @@
                 currentUserUid = auth.currentUser?.uid || crypto.randomUUID();
                 document.getElementById('navUserId').textContent = `UID: ${currentUserUid}`;
                 document.getElementById('cloudStatusText').textContent = "Live Cloud Sync";
+                const dot = document.getElementById('cloudStatusDot');
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
 
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
@@ -955,6 +1094,7 @@
                 });
             } catch (err) {
                 console.warn("Cloud initialization fallback:", err);
+                showToast("Firebase connection error: check your config keys & Firestore rules.");
             }
         }
 
@@ -989,6 +1129,7 @@
             renderPumpTable();
             renderCarParTable();
             renderLoginPendingCarPar();
+            renderLoginPersonnelDropdown();
             renderUaucTable();
             renderAccidentTable();
             renderAdminZoneOptions();
@@ -1217,6 +1358,7 @@
             else if (entry.category === "CAR/PAR") carParData.unshift(entry.payload);
             else if (entry.category === "UAUC") uaucData.unshift(entry.payload);
             else if (entry.category === "Accident") accidentData.unshift(entry.payload);
+            else if (entry.category === "Personnel") personnelData.push(entry.payload);
             else if (entry.category === "Zone Parameter") {
                 const targetZone = ZONES_DATA.find(z => z.id === entry.payload.zoneId);
                 if (targetZone) targetZone.parameters.push(entry.payload.param);
@@ -1244,6 +1386,34 @@
         }
 
         // --- PHOTO ATTACHMENT HELPER ---
+        function getPhotoInputHtml(existingPhotoName = '') {
+            return `
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                    <label class="block text-xs font-semibold text-slate-700">
+                        <i class="fa-solid fa-camera text-brand-600 mr-1"></i> Photo Attachment (Camera / Gallery)
+                    </label>
+                    <input type="file" accept="image/*" capture="environment" onchange="handlePhotoSelect(event)" class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
+                    ${existingPhotoName ? `<p class="text-[11px] text-emerald-600 font-medium"><i class="fa-solid fa-paperclip mr-1"></i>Current: ${existingPhotoName}</p>` : ''}
+                    <div id="modalPhotoPreviewBox" class="hidden pt-2">
+                        <img id="modalPhotoPreviewImg" src="" alt="Preview" class="h-24 rounded-lg border border-slate-300 object-cover">
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPhotoBadge(photoName, titleText) {
+            if (!photoName) {
+                return `<span class="text-xs text-slate-400">No Photo</span>`;
+            }
+            const safeName = photoName.replace(/'/g, "\\'");
+            const safeTitle = (titleText || '').replace(/'/g, "\\'");
+            return `
+                <button type="button" onclick="viewAttachedPhoto('${safeName}', '${safeTitle}')" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition">
+                    <i class="fa-solid fa-image"></i> View
+                </button>
+            `;
+        }
+
         function handlePhotoSelect(event) {
             const file = event.target.files?.[0];
             if (!file) return;
@@ -1280,45 +1450,32 @@
             `);
         }
 
-        function renderPhotoBadge(photoName, contextTitle) {
-            if (!photoName) {
-                return `<span class="text-xs text-slate-400">No Photo</span>`;
+        // --- AUTHENTICATION & LOGIN PERSONNEL DROPDOWN ---
+        function renderLoginPersonnelDropdown() {
+            const select = document.getElementById('loginUsername');
+            if (!select) return;
+            const prevVal = select.value;
+            select.innerHTML = personnelData.map((p, idx) =>
+                `<option value="${idx}">${p.name} (${p.role})</option>`
+            ).join('');
+            if (prevVal !== "" && personnelData[prevVal]) {
+                select.value = prevVal;
             }
-            const safeName = photoName.replace(/'/g, "\\'");
-            const safeTitle = (contextTitle || 'Attached Photo').replace(/'/g, "\\'");
-            return `
-                <button onclick="viewAttachedPhoto('${safeName}', '${safeTitle}')" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 rounded-lg text-xs font-semibold inline-flex items-center gap-1">
-                    <i class="fa-solid fa-camera"></i> View
-                </button>
-            `;
+            updateLoginPersonnelHint();
         }
 
-        function getPhotoInputHtml(existingPhotoName = "") {
-            const hasExisting = Boolean(existingPhotoName);
-            const existingUrl = hasExisting ? (photoPreviewCache[existingPhotoName] || `https://placehold.co/400x260/e2e8f0/0f172a?text=${encodeURIComponent(existingPhotoName)}`) : "";
-            return `
-                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                    <label class="block text-xs font-semibold text-slate-700">
-                        <i class="fa-solid fa-camera text-brand-600 mr-1"></i> Photo Attachment (Camera / Gallery)
-                    </label>
-                    <input type="file" accept="image/*" onchange="handlePhotoSelect(event)" class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
-                    <div id="modalPhotoPreviewBox" class="${hasExisting ? '' : 'hidden'} pt-2">
-                        <img id="modalPhotoPreviewImg" src="${existingUrl}" alt="Preview" class="h-28 rounded-lg border border-slate-300 object-cover">
-                        <p class="text-[11px] text-slate-500 mt-1">Attached: <span id="modalPhotoNameText">${existingPhotoName || 'Selected Image'}</span></p>
-                    </div>
-                </div>
-            `;
+        function updateLoginPersonnelHint() {
+            const select = document.getElementById('loginUsername');
+            const hint = document.getElementById('loginPersonnelMeta');
+            if (!select || !hint) return;
+            const staff = personnelData[select.value];
+            if (staff) {
+                hint.innerHTML = `<i class="fa-solid fa-calendar-check text-brand-600 mr-1"></i>Assigned: <strong>${staff.assignedZone || 'All Zones'}</strong> &bull; Window: <strong>${staff.timeWindow || 'Flexible'}</strong> &bull; Offday: <strong>${staff.offday || 'Sunday'}</strong>`;
+            } else {
+                hint.textContent = "";
+            }
         }
 
-        // --- INIT APP ---
-        window.addEventListener("DOMContentLoaded", () => {
-            document.getElementById('currentInspectionDate').textContent = new Date().toISOString().split('T')[0];
-            refreshAllViews();
-            initCharts();
-            initCloudSync();
-        });
-
-        // --- AUTHENTICATION ---
         function handleLogin(e) {
             e.preventDefault();
             const honeypot = document.getElementById('loginBotHoneypot')?.value;
@@ -1326,19 +1483,32 @@
                 showToast("Automated bot login blocked!");
                 return;
             }
-            const role = document.getElementById('loginRole').value;
-            const username = document.getElementById('loginUsername').value;
+            const selectedIdx = document.getElementById('loginUsername').value;
+            const enteredPass = (document.getElementById('loginPassword').value || "").trim();
+            const staff = personnelData[selectedIdx];
+
+            if (!staff) {
+                showToast("Please select a registered personnel name.");
+                return;
+            }
+
+            if (staff.password && enteredPass !== staff.password) {
+                showToast("Incorrect password for " + staff.name + "!");
+                return;
+            }
 
             currentUser = {
-                name: username || "KLSM Staff",
-                role: role
+                name: staff.name,
+                role: staff.role || "Inspector",
+                assignedZone: staff.assignedZone || "",
+                timeWindow: staff.timeWindow || ""
             };
 
             document.getElementById('navUserName').textContent = currentUser.name;
-            document.getElementById('navUserRole').textContent = role === "Admin" ? "HSE Admin / Manager" : "Safety Inspector";
+            document.getElementById('navUserRole').textContent = currentUser.role === "Admin" ? "HSE Admin / Manager" : `Inspector (${staff.frequencyPeriod || 'Weekly'})`;
 
             const adminTab = document.getElementById('adminTabBtn');
-            if (role === 'Admin') {
+            if (currentUser.role === 'Admin') {
                 adminTab.classList.remove('hidden');
             } else {
                 adminTab.classList.add('hidden');
@@ -1346,7 +1516,7 @@
 
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('mainDashboard').classList.remove('hidden');
-            showToast(`Welcome back, ${currentUser.name}!`);
+            showToast(`Welcome, ${currentUser.name} (${currentUser.role})!`);
         }
 
         function handleLogout() {
@@ -2115,24 +2285,30 @@
                     <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
                 <form onsubmit="saveUauc(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Category</label>
-                            <select id="uaucCategory" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <select id="uaucCategory" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
                                 <option ${item.category === 'Unsafe Act' ? 'selected' : ''}>Unsafe Act</option>
                                 <option ${item.category === 'Unsafe Condition' ? 'selected' : ''}>Unsafe Condition</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Date</label>
-                            <input type="date" id="uaucDate" required value="${item.date}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <input type="date" id="uaucDate" required value="${item.date}" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
-                        <select id="uaucZone" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                            ${ZONES_DATA.map(z => `<option ${item.zone === z.name ? 'selected' : ''}>${z.name}</option>`).join('')}
-                        </select>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
+                            <select id="uaucZone" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                                ${ZONES_DATA.map(z => `<option ${item.zone === z.name ? 'selected' : ''}>${z.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Reporter Name</label>
+                            <input type="text" id="uaucReporter" required value="${item.reporter || currentUser.name}" placeholder="Enter your name" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Observed Hazard / Finding</label>
@@ -2140,12 +2316,12 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Immediate Action Taken</label>
-                        <input type="text" id="uaucAction" required value="${item.immediateAction}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        <input type="text" id="uaucAction" required value="${item.immediateAction}" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Risk Level</label>
-                            <select id="uaucRisk" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <select id="uaucRisk" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
                                 <option ${item.risk === 'LOW' ? 'selected' : ''}>LOW</option>
                                 <option ${item.risk === 'MEDIUM' ? 'selected' : ''}>MEDIUM</option>
                                 <option ${item.risk === 'HIGH' ? 'selected' : ''}>HIGH</option>
@@ -2153,15 +2329,91 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                            <select id="uaucStatus" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                            <select id="uaucStatus" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
                                 <option ${item.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
                                 <option ${item.status === 'Closed' ? 'selected' : ''}>Closed</option>
                             </select>
                         </div>
                     </div>
                     ${getPhotoInputHtml(item.photoName)}
-                    <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm">
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm">
                         ${isEdit ? 'Update UAUC Report' : 'Submit UAUC Report'}
+                    </button>
+                </form>
+            `);
+        }
+
+        // Public UAUC submission modal directly from the Login Screen (no login required)
+        function openPublicUaucModal() {
+            pendingPhotoFile = null;
+            const today = new Date().toISOString().split('T')[0];
+            openModal(`
+                <div class="flex justify-between items-start mb-4 border-b border-slate-200 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900">Public UAUC Report Submission</h3>
+                            <p class="text-xs text-slate-500">Report an Unsafe Act or Unsafe Condition directly from your handphone</p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form onsubmit="saveUauc(event, null)" class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Your Name / Department</label>
+                            <input type="text" id="uaucReporter" required placeholder="e.g. Razak (Mill Operator)" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                            <select id="uaucCategory" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                                <option value="Unsafe Condition">Unsafe Condition (UC)</option>
+                                <option value="Unsafe Act">Unsafe Act (UA)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
+                            <select id="uaucZone" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                                ${ZONES_DATA.map(z => `<option>${z.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Date Observed</label>
+                            <input type="date" id="uaucDate" required value="${today}" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Observed Hazard / Unsafe Act Description</label>
+                        <textarea id="uaucObs" required placeholder="Describe what you saw clearly..." class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Immediate Action Taken (if any)</label>
+                        <input type="text" id="uaucAction" required placeholder="e.g. Informed supervisor / Cordoned area" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Estimated Risk Level</label>
+                            <select id="uaucRisk" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                                <option value="MEDIUM">MEDIUM</option>
+                                <option value="HIGH">HIGH</option>
+                                <option value="LOW">LOW</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                            <select id="uaucStatus" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                                <option value="In Progress">In Progress</option>
+                                <option value="Closed">Closed</option>
+                            </select>
+                        </div>
+                    </div>
+                    ${getPhotoInputHtml("")}
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm shadow-md">
+                        <i class="fa-solid fa-paper-plane mr-1.5"></i> Submit Public UAUC Report
                     </button>
                 </form>
             `);
@@ -2171,6 +2423,7 @@
             e.preventDefault();
             const isEdit = editIndex !== null && editIndex !== undefined;
             const existing = isEdit ? uaucData[editIndex] : null;
+            const reporterInput = document.getElementById('uaucReporter')?.value?.trim();
 
             const record = {
                 id: isEdit ? existing.id : `UAUC-${Date.now()}`,
@@ -2179,7 +2432,7 @@
                 zone: document.getElementById('uaucZone').value,
                 observation: document.getElementById('uaucObs').value,
                 immediateAction: document.getElementById('uaucAction').value,
-                reporter: isEdit ? existing.reporter : currentUser.name,
+                reporter: reporterInput || (isEdit ? existing.reporter : currentUser.name),
                 risk: document.getElementById('uaucRisk').value,
                 status: document.getElementById('uaucStatus').value,
                 photoName: pendingPhotoFile ? pendingPhotoFile.name : (existing?.photoName || "")
@@ -2191,7 +2444,7 @@
                 showToast("UAUC Report updated!");
             } else {
                 uaucData.unshift(record);
-                showToast("UAUC Observation recorded!");
+                showToast("UAUC Report submitted to KLSM Hub!");
             }
             saveAllData();
             closeModal();
@@ -2338,38 +2591,47 @@
         // --- ADMIN SETTINGS HUB ---
         function renderAdminZoneOptions() {
             const select = document.getElementById('adminZoneSelect');
-            if (!select) return;
-            const currentVal = select.value;
-            select.innerHTML = ZONES_DATA.map(z => `<option value="${z.id}">${z.name}</option>`).join('');
-            if (currentVal) select.value = currentVal;
-            loadAdminZoneParameters();
+            if (select) {
+                const currentVal = select.value;
+                select.innerHTML = ZONES_DATA.map(z => `<option value="${z.id}">${z.name}</option>`).join('');
+                if (currentVal) select.value = currentVal;
+                loadAdminZoneParameters();
+            }
+
+            const personnelZoneSelect = document.getElementById('newPersonnelZone');
+            if (personnelZoneSelect) {
+                const currentZoneVal = personnelZoneSelect.value;
+                personnelZoneSelect.innerHTML =
+                    `<option value="All Zones (HSE Manager)">All Zones (HSE Manager)</option>` +
+                    ZONES_DATA.map(z => `<option value="${z.name}">${z.name}</option>`).join('');
+                if (currentZoneVal) personnelZoneSelect.value = currentZoneVal;
+            }
         }
 
         function loadAdminZoneParameters() {
             const select = document.getElementById('adminZoneSelect');
-            if (!select) return;
-            const zoneId = select.value;
-            const zone = ZONES_DATA.find(z => z.id === zoneId);
-            const container = document.getElementById('adminParamList');
-            if (!container) return;
-            container.innerHTML = '';
+            const list = document.getElementById('adminParamList');
+            if (!select || !list) return;
 
-            if (zone && zone.parameters.length > 0) {
-                zone.parameters.forEach((p, idx) => {
-                    const item = document.createElement('div');
-                    item.className = "flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs";
-                    item.innerHTML = `
-                        <div>
-                            <span class="font-bold text-slate-800">${p.name}</span>
-                            <p class="text-slate-500">${p.criteria}</p>
-                        </div>
-                        <button onclick="removeParam('${zone.id}', ${idx})" class="text-rose-600 hover:text-rose-800 font-semibold"><i class="fa-solid fa-trash"></i></button>
-                    `;
-                    container.appendChild(item);
-                });
-            } else {
-                container.innerHTML = `<p class="text-xs text-slate-400">No custom parameters configured.</p>`;
-            }
+            const zoneId = select.value || ZONES_DATA[0].id;
+            const zone = ZONES_DATA.find(z => z.id === zoneId);
+            if (!zone) return;
+
+            list.innerHTML = '';
+            zone.parameters.forEach((param, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs";
+                div.innerHTML = `
+                    <div>
+                        <span class="font-bold text-slate-800 block">${param.name}</span>
+                        <span class="text-slate-500 text-[11px]">${param.criteria}</span>
+                    </div>
+                    <button type="button" onclick="removeParam('${zone.id}', ${idx})" class="text-rose-500 hover:text-rose-700 p-1" title="Remove Parameter">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+                list.appendChild(div);
+            });
         }
 
         function addZoneParameter() {
@@ -2399,32 +2661,179 @@
 
         function renderPersonnelList() {
             const list = document.getElementById('personnelList');
+            const badge = document.getElementById('personnelCountBadge');
+            if (badge) badge.textContent = `${personnelData.length} Registered`;
             if (!list) return;
             list.innerHTML = '';
-            personnelData.forEach(p => {
-                const li = document.createElement('li');
-                li.className = "py-2 flex justify-between items-center";
-                li.innerHTML = `
-                    <div>
-                        <span class="font-semibold text-slate-800">${p.name}</span>
-                        <p class="text-slate-400 text-[11px]">${p.role}</p>
-                    </div>
-                    <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-medium">${p.dept}</span>
+
+            personnelData.forEach((p, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                const roleBadge = p.role === 'Admin'
+                    ? `<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full text-[10px] font-bold">Admin</span>`
+                    : `<span class="px-2 py-0.5 bg-brand-50 text-brand-700 rounded-full text-[10px] font-bold">Inspector</span>`;
+
+                tr.innerHTML = `
+                    <td class="p-2.5 font-bold text-slate-900">${p.name}</td>
+                    <td class="p-2.5">${roleBadge}</td>
+                    <td class="p-2.5 font-medium text-slate-700">${p.targetFrequency || 1}x / ${p.frequencyPeriod || 'Weekly'}</td>
+                    <td class="p-2.5 text-[11px] text-slate-600 max-w-[180px] truncate" title="${p.assignedZone || ''}">${p.assignedZone || 'All Zones'}</td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[10px] font-semibold">${p.offday || 'Sunday'}</span></td>
+                    <td class="p-2.5 font-mono text-[11px] text-slate-700">${p.timeWindow || '08:00 - 12:00'}</td>
+                    <td class="p-2.5 font-mono text-slate-500">${p.password || '1234'}</td>
+                    <td class="p-2.5 text-right whitespace-nowrap space-x-1">
+                        <button onclick="editPersonnel(${idx})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-[11px] font-semibold" title="Edit Staff">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button onclick="deletePersonnel(${idx})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-[11px] font-semibold" title="Delete Staff">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
                 `;
-                list.appendChild(li);
+                list.appendChild(tr);
             });
         }
 
-        function addPersonnel() {
-            const name = document.getElementById('newPersonnelName').value;
-            const role = document.getElementById('newPersonnelRole').value;
-            if (!name || !role) return;
+        function savePersonnel(e) {
+            e.preventDefault();
+            const editIdx = document.getElementById('editPersonnelIndex').value;
+            const record = {
+                name: document.getElementById('newPersonnelName').value.trim(),
+                role: document.getElementById('newPersonnelRole').value,
+                targetFrequency: document.getElementById('newPersonnelTargetFreq').value,
+                frequencyPeriod: document.getElementById('newPersonnelFreqPeriod').value,
+                password: document.getElementById('newPersonnelPassword').value.trim() || "1234",
+                offday: document.getElementById('newPersonnelOffday').value,
+                assignedZone: document.getElementById('newPersonnelZone').value,
+                timeWindow: document.getElementById('newPersonnelWindow').value.trim()
+            };
 
-            personnelData.push({ name, role, dept: "KLSM Mill" });
-            document.getElementById('newPersonnelName').value = '';
-            document.getElementById('newPersonnelRole').value = '';
+            if (!record.name) return;
+
+            if (editIdx !== "") {
+                personnelData[Number(editIdx)] = record;
+                showToast(`Updated personnel record for ${record.name}!`);
+            } else {
+                personnelData.push(record);
+                showToast(`Registered ${record.name} (${record.role})!`);
+            }
+
+            resetPersonnelForm();
             saveAllData();
-            showToast("Personnel registered!");
+        }
+
+        function editPersonnel(idx) {
+            const p = personnelData[idx];
+            if (!p) return;
+            document.getElementById('editPersonnelIndex').value = idx;
+            document.getElementById('newPersonnelName').value = p.name || "";
+            document.getElementById('newPersonnelRole').value = p.role || "Inspector";
+            document.getElementById('newPersonnelTargetFreq').value = p.targetFrequency || "2";
+            document.getElementById('newPersonnelFreqPeriod').value = p.frequencyPeriod || "Weekly";
+            document.getElementById('newPersonnelPassword').value = p.password || "1234";
+            document.getElementById('newPersonnelOffday').value = p.offday || "Sunday";
+            document.getElementById('newPersonnelZone').value = p.assignedZone || ZONES_DATA[0].name;
+            document.getElementById('newPersonnelWindow').value = p.timeWindow || "08:00 - 12:00";
+
+            document.getElementById('savePersonnelBtnText').textContent = "Update Personnel";
+            document.getElementById('cancelEditPersonnelBtn').classList.remove('hidden');
+        }
+
+        function resetPersonnelForm() {
+            document.getElementById('editPersonnelIndex').value = "";
+            document.getElementById('newPersonnelName').value = "";
+            document.getElementById('newPersonnelRole').value = "Inspector";
+            document.getElementById('newPersonnelTargetFreq').value = "2";
+            document.getElementById('newPersonnelFreqPeriod').value = "Weekly";
+            document.getElementById('newPersonnelPassword').value = "1234";
+            document.getElementById('newPersonnelOffday').value = "Sunday";
+            document.getElementById('newPersonnelWindow').value = "08:00 - 12:00";
+            document.getElementById('savePersonnelBtnText').textContent = "Register Personnel";
+            document.getElementById('cancelEditPersonnelBtn').classList.add('hidden');
+        }
+
+        function deletePersonnel(idx) {
+            if (personnelData.length <= 1) {
+                showToast("Cannot delete the last remaining personnel account!");
+                return;
+            }
+            const item = personnelData[idx];
+            if (!item) return;
+            requestSecureDelete("Personnel", `${item.name} (${item.role})`, item, () => {
+                personnelData.splice(idx, 1);
+                showToast("Personnel moved to Recovery Vault.");
+            });
+        }
+        function openFirebaseSetupModal() {
+            const currentJson = customFirebaseConfig ? JSON.stringify(customFirebaseConfig, null, 2) : `{
+  "apiKey": "YOUR_API_KEY",
+  "authDomain": "your-project.firebaseapp.com",
+  "projectId": "your-project-id",
+  "storageBucket": "your-project.appspot.com",
+  "messagingSenderId": "123456789",
+  "appId": "1:123456789:web:abcdef"
+}`;
+            openModal(`
+                <div class="space-y-4">
+                    <div class="flex justify-between items-start border-b border-slate-200 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-fire-flame-curved"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base sm:text-lg font-bold text-slate-900">How to Link Your Own Firebase Cloud</h3>
+                                <p class="text-xs text-slate-500">Step-by-step assistant to enable real-time multi-phone sync on GitHub Pages</p>
+                            </div>
+                        </div>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+
+                    <div class="space-y-3 text-xs text-slate-700 leading-relaxed">
+                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                            <p class="font-bold text-slate-900">Step 1: Create a Free Firebase Project</p>
+                            <ol class="list-decimal list-inside space-y-1 text-slate-600">
+                                <li>Go to <a href="https://console.firebase.google.com/" target="_blank" class="text-brand-600 underline font-semibold">console.firebase.google.com</a> and click <strong>Create a project</strong> (e.g., <code>klsm-hub</code>).</li>
+                                <li>On the Project Overview page, click the <strong>Web icon (<code>&lt;/&gt;</code>)</strong> to register a web app, name it <code>KLSM Hub</code>, and copy the <code>firebaseConfig</code> object.</li>
+                            </ol>
+                        </div>
+
+                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                            <p class="font-bold text-slate-900">Step 2: Enable Anonymous Auth & Firestore Database</p>
+                            <ol class="list-decimal list-inside space-y-1 text-slate-600">
+                                <li>In the left menu, click <strong>Build &rarr; Authentication &rarr; Get started</strong>, select <strong>Anonymous</strong>, and toggle <strong>Enable &rarr; Save</strong>.</li>
+                                <li>In the left menu, click <strong>Build &rarr; Firestore Database &rarr; Create database</strong>, choose a location (e.g., <code>asia-southeast1</code>), and start in <strong>Test mode</strong> (or allow read/write for <code>request.auth != null</code>).</li>
+                            </ol>
+                        </div>
+
+                        <div class="p-3.5 bg-amber-50/70 rounded-xl border border-amber-200 space-y-2">
+                            <p class="font-bold text-amber-950">Step 3: Paste Your Firebase Config Below to Connect Live</p>
+                            <textarea id="firebaseConfigInput" rows="6" class="w-full p-2.5 font-mono text-[11px] bg-white border border-amber-300 rounded-xl text-slate-800">${currentJson}</textarea>
+                            <div class="flex flex-wrap gap-2 justify-end">
+                                <button type="button" onclick="applyCustomFirebaseConfig()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs">
+                                    <i class="fa-solid fa-plug-circle-check mr-1"></i> Connect Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+
+        function applyCustomFirebaseConfig() {
+            const rawText = document.getElementById('firebaseConfigInput')?.value || "";
+            try {
+                const cleaned = rawText
+                    .replace(/const\s+firebaseConfig\s*=\s*/, '')
+                    .replace(/;$/, '')
+                    .trim();
+                const parsed = JSON.parse(cleaned);
+                window.__custom_firebase_config = parsed;
+                initCloudSync(parsed);
+                closeModal();
+                showToast("Connected to your Firebase Cloud project!");
+            } catch (err) {
+                showToast("Invalid JSON format. Make sure keys are in double quotes.");
+            }
         }
 
         // --- ALERT TABLE & CHARTS ---
@@ -2584,6 +2993,7 @@
         Object.assign(window, {
             handleLogin,
             handleLogout,
+            updateLoginPersonnelHint,
             switchTab,
             startZoneInspection,
             submitZoneInspection,
@@ -2601,6 +3011,7 @@
             saveCarPar,
             deleteCarPar,
             openUaucModal,
+            openPublicUaucModal,
             saveUauc,
             deleteUauc,
             openAccidentModal,
@@ -2609,9 +3020,14 @@
             loadAdminZoneParameters,
             addZoneParameter,
             removeParam,
-            addPersonnel,
+            savePersonnel,
+            editPersonnel,
+            resetPersonnelForm,
+            deletePersonnel,
             exportDataReport,
             openPublishGuideModal,
+            openFirebaseSetupModal,
+            applyCustomFirebaseConfig,
             openModal,
             closeModal,
             handlePhotoSelect,
@@ -2620,6 +3036,15 @@
             confirmSecureDelete,
             updateSecuritySettings,
             restoreDeletedItem
+        });
+
+        // Initialize App on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            const dateEl = document.getElementById('currentInspectionDate');
+            if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' });
+            refreshAllViews();
+            initCharts();
+            initCloudSync();
         });
     </script>
 </body>
