@@ -1833,12 +1833,18 @@
             const now = new Date();
             const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             const monthLabel = now.toLocaleDateString('en-MY', { month: 'long', year: 'numeric' });
+            const activeUserName = (currentUser?.name || '').trim().toLowerCase();
 
-            // Find all logs submitted for this zone during the current month
-            const monthlyLogs = zoneInspectionLogs.filter(log => {
+            // Find logs submitted ONLY by the current logged-in user for this zone during the current month
+            const userMonthlyLogs = zoneInspectionLogs.filter(log => {
                 const isSameZone = log.zoneId === zone.id || log.zone === zone.name;
                 const isCurrentMonth = typeof log.date === 'string' && log.date.startsWith(currentYearMonth);
-                return isSameZone && isCurrentMonth;
+                const isSameUser = Boolean(
+                    activeUserName &&
+                    log.inspector &&
+                    log.inspector.trim().toLowerCase() === activeUserName
+                );
+                return isSameZone && isCurrentMonth && isSameUser;
             });
 
             // Check if current logged-in personnel is assigned to this zone
@@ -1848,16 +1854,11 @@
                 (currentUser.assignedZone === zone.name || currentUser.assignedZone.includes('All Zones'))
             );
 
-            // Check logs by current user this month
-            const userMonthlyLogs = monthlyLogs.filter(
-                log => currentUser && log.inspector && log.inspector.toLowerCase() === currentUser.name.toLowerCase()
-            );
-
             return {
-                completedThisMonth: monthlyLogs.length > 0,
-                totalMonthlyCount: monthlyLogs.length,
+                completedThisMonth: userMonthlyLogs.length > 0,
+                totalMonthlyCount: userMonthlyLogs.length,
                 userMonthlyCount: userMonthlyLogs.length,
-                lastLog: monthlyLogs[0] || null,
+                lastLog: userMonthlyLogs[0] || null,
                 isAssignedToCurrentUser,
                 monthLabel
             };
@@ -1879,13 +1880,13 @@
                     ? `<div class="mb-3 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-2">
                         <i class="fa-solid fa-circle-check text-emerald-600 mt-0.5"></i>
                         <div class="text-xs">
-                            <span class="font-bold text-emerald-900 block">Completed for ${status.monthLabel} (${status.totalMonthlyCount}x)</span>
-                            <span class="text-[11px] text-emerald-700">Last by <strong>${status.lastLog.inspector}</strong> on ${status.lastLog.date} (${status.lastLog.score})</span>
+                            <span class="font-bold text-emerald-900 block">Completed by You (${status.monthLabel} &bull; ${status.userMonthlyCount}x)</span>
+                            <span class="text-[11px] text-emerald-700">Your last submission: <strong>${status.lastLog.date}</strong> (${status.lastLog.score})</span>
                         </div>
                        </div>`
                     : `<div class="mb-3 p-2 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-center gap-2 text-xs text-amber-800">
                         <i class="fa-regular fa-clock text-amber-600"></i>
-                        <span class="font-medium">Pending Inspection for ${status.monthLabel}</span>
+                        <span class="font-medium">Pending Your Inspection for ${status.monthLabel}</span>
                        </div>`;
 
                 const assignedBadgeHtml = status.isAssignedToCurrentUser
@@ -2073,8 +2074,8 @@
                                     <i class="fa-solid fa-circle-exclamation"></i>
                                 </div>
                                 <div>
-                                    <h3 class="text-base sm:text-lg font-bold text-slate-900">Zone Already Inspected This Month</h3>
-                                    <p class="text-xs text-slate-500">Confirmation required for repeat inspection</p>
+                                    <h3 class="text-base sm:text-lg font-bold text-slate-900">You Already Inspected This Zone This Month</h3>
+                                    <p class="text-xs text-slate-500">Confirmation required for repeat inspection by ${currentUser.name}</p>
                                 </div>
                             </div>
                             <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
@@ -2082,8 +2083,8 @@
 
                         <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-200 space-y-1.5 text-xs text-emerald-950">
                             <p class="font-bold text-sm text-emerald-900"><i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> ${zone.name}</p>
-                            <p>This zone has already been completed <strong>${status.totalMonthlyCount} time(s)</strong> in <strong>${status.monthLabel}</strong>.</p>
-                            <p class="text-[11px] text-emerald-800">Latest submission: <strong>${status.lastLog.inspector}</strong> on <strong>${status.lastLog.date}</strong> (Score: <strong>${status.lastLog.score}</strong>)</p>
+                            <p>You (<strong>${currentUser.name}</strong>) have already completed this zone <strong>${status.userMonthlyCount} time(s)</strong> in <strong>${status.monthLabel}</strong>.</p>
+                            <p class="text-[11px] text-emerald-800">Your latest submission: <strong>${status.lastLog.date}</strong> (Score: <strong>${status.lastLog.score}</strong>)</p>
                         </div>
 
                         <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
