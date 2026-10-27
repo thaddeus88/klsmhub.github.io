@@ -76,8 +76,8 @@
                             <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-600 text-white text-2xl font-bold shadow-lg shadow-brand-500/30 mb-3">
                                 <i class="fa-solid fa-shield-halved"></i>
                             </div>
-                            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">KLSM Inspection Hub</h1>
-                            <p class="text-xs sm:text-sm text-slate-500 mt-1">Safety, Environment & Operational Compliance</p>
+                            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">KIM LOONG SABAH MILLS SDN BHD</h1>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-1">KLSM Inspection Hub</p>
                         </div>
 
                         <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
@@ -99,19 +99,24 @@
                             </button>
                         </form>
 
-                        <!-- Public UAUC Quick Reporting Action (No Login Required) -->
-                        <div class="mt-5 pt-5 border-t border-slate-200">
+                        <!-- Public UAUC & Accident Quick Reporting Actions (No Login Required) -->
+                        <div class="mt-5 pt-5 border-t border-slate-200 space-y-2.5">
                             <div class="p-3.5 rounded-xl bg-indigo-50/90 border border-indigo-200/80 space-y-2">
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                                        <i class="fa-solid fa-triangle-exclamation text-indigo-600"></i> Spot a Hazard? (Public Access)
+                                        <i class="fa-solid fa-triangle-exclamation text-indigo-600"></i> Emergency & Hazard Reporting (Public)
                                     </span>
                                     <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-full">No Login Needed</span>
                                 </div>
-                                <p class="text-[11px] text-indigo-800 leading-relaxed">All mill personnel & visitors can immediately submit an Unsafe Act / Unsafe Condition (UAUC) report with photo evidence.</p>
-                                <button type="button" onclick="openPublicUaucModal()" class="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-semibold rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-xs">
-                                    <i class="fa-solid fa-camera"></i> Submit Instant UAUC Report
-                                </button>
+                                <p class="text-[11px] text-indigo-800 leading-relaxed">All mill personnel & visitors can immediately submit a UAUC hazard report or workplace accident report with camera photos.</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                    <button type="button" onclick="openPublicUaucModal()" class="w-full py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-semibold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 text-xs">
+                                        <i class="fa-solid fa-camera"></i> Submit UAUC Report
+                                    </button>
+                                    <button type="button" onclick="openPublicAccidentModal()" class="w-full py-2.5 px-3 bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white font-semibold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 text-xs">
+                                        <i class="fa-solid fa-kit-medical"></i> Report Accident
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -832,9 +837,9 @@
                                 <div class="flex justify-between items-center mb-2">
                                     <div>
                                         <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                                            <i class="fa-solid fa-trash-can-arrow-up text-emerald-600"></i> Deleted Data Recovery Vault (Soft-Delete Backup)
+                                            <i class="fa-solid fa-trash-can-arrow-up text-emerald-600"></i> Deleted Data Recovery Vault (30-Day Auto-Delete)
                                         </h3>
-                                        <p class="text-xs text-slate-500">Any deleted record is safely archived here so you can restore it with 1 click.</p>
+                                        <p class="text-xs text-slate-500">Deleted records are archived here for 1-click restoration and automatically purged after 30 days.</p>
                                     </div>
                                     <span id="recycleBinCount" class="px-2.5 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-full">0 Archived</span>
                                 </div>
@@ -1069,11 +1074,11 @@
         // so ALL handphones & PCs connect automatically without "UID: local-session"!
         // ============================================================================
         const DEFAULT_KLSM_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyBkaq-9OnrxthkUC1LbVLoFGeDrSbUQAj4",
+            apiKey: "", // <-- PASTE YOUR FIREBASE apiKey HERE (starts with AIza...)
             authDomain: "klsm-inspection-hub-v2.firebaseapp.com",
             projectId: "klsm-inspection-hub-v2",
             storageBucket: "klsm-inspection-hub-v2.firebasestorage.app",
-            appId: "1:724914634355:web:0ec78b8644860338feb406"
+            appId: ""
         };
 
         // --- CLOUD FIRESTORE INITIALIZATION (MULTI-USER) ---
@@ -1243,7 +1248,27 @@
             }
         }
 
+        function purgeExpiredRecycleBinItems() {
+            if (!Array.isArray(recycleBinData) || recycleBinData.length === 0) return false;
+            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            const initialLen = recycleBinData.length;
+
+            recycleBinData = recycleBinData.filter(entry => {
+                let ts = entry.deletedTimestamp;
+                if (!ts && entry.deletedAt) {
+                    const parsed = Date.parse(entry.deletedAt.replace(' ', 'T'));
+                    if (!isNaN(parsed)) ts = parsed;
+                }
+                if (!ts) return true;
+                return (now - ts) < THIRTY_DAYS_MS;
+            });
+
+            return recycleBinData.length !== initialLen;
+        }
+
         function refreshAllViews() {
+            purgeExpiredRecycleBinItems();
             renderZonesGrid();
             renderZoneLogsTable();
             renderExtinguishersTable();
@@ -1420,6 +1445,7 @@
             if (pendingDeleteAction) {
                 recycleBinData.unshift({
                     deletedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                    deletedTimestamp: Date.now(),
                     deletedBy: currentUser.name,
                     category: pendingDeleteAction.category,
                     label: pendingDeleteAction.label,
@@ -1443,26 +1469,38 @@
         }
 
         function renderRecycleBin() {
+            purgeExpiredRecycleBinItems();
             const list = document.getElementById('recycleBinList');
             const badge = document.getElementById('recycleBinCount');
             if (badge) badge.textContent = `${recycleBinData.length} Archived`;
             if (!list) return;
 
             if (recycleBinData.length === 0) {
-                list.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No deleted records in vault.</p>`;
+                list.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No deleted records in vault (items older than 30 days are auto-deleted).</p>`;
                 return;
             }
 
+            const DAY_MS = 24 * 60 * 60 * 1000;
+            const now = Date.now();
+
             list.innerHTML = '';
             recycleBinData.forEach((entry, idx) => {
+                let ts = entry.deletedTimestamp;
+                if (!ts && entry.deletedAt) {
+                    const parsed = Date.parse(entry.deletedAt.replace(' ', 'T'));
+                    if (!isNaN(parsed)) ts = parsed;
+                }
+                const elapsedDays = ts ? Math.floor((now - ts) / DAY_MS) : 0;
+                const daysLeft = Math.max(1, 30 - elapsedDays);
+
                 const row = document.createElement('div');
-                row.className = "flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs";
+                row.className = "flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs gap-2";
                 row.innerHTML = `
                     <div>
                         <span class="font-bold text-slate-800">[${entry.category}] ${entry.label}</span>
-                        <p class="text-[10px] text-slate-400">Deleted by ${entry.deletedBy} at ${entry.deletedAt}</p>
+                        <p class="text-[10px] text-slate-400">Deleted by ${entry.deletedBy} at ${entry.deletedAt} &bull; <span class="text-amber-600 font-semibold">Auto-deletes in ${daysLeft}d</span></p>
                     </div>
-                    <button onclick="restoreDeletedItem(${idx})" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-[11px] flex items-center gap-1">
+                    <button onclick="restoreDeletedItem(${idx})" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-[11px] flex items-center gap-1 whitespace-nowrap">
                         <i class="fa-solid fa-rotate-left"></i> Restore
                     </button>
                 `;
@@ -3178,19 +3216,85 @@
             renderModalPhotoPreviews();
         }
 
+        // Public Accident Reporting Modal directly from the Login Screen (no login required)
+        function openPublicAccidentModal() {
+            pendingPhotos = [];
+            const nowStr = `${new Date().toISOString().split('T')[0]} ${new Date().toTimeString().substring(0, 5)}`;
+            openModal(`
+                <div class="flex justify-between items-start mb-4 border-b border-slate-200 pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-kit-medical"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base sm:text-lg font-bold text-slate-900">Public Accident & Incident Report</h3>
+                            <p class="text-xs text-slate-500">Report a workplace accident, injury, or near-miss immediately (No login required)</p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form onsubmit="saveAccident(event, null)" class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Reporter Name / Department</label>
+                            <input type="text" id="accReporter" required placeholder="e.g. Faizal (Production)" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Date & Time of Incident</label>
+                            <input type="text" id="accDatetime" required value="${nowStr}" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Incident Type / Severity</label>
+                            <select id="accType" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                                <option>Near Miss</option>
+                                <option>First Aid Case</option>
+                                <option>Medical Treatment Case</option>
+                                <option>Lost Time Injury (LTI)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Zone Location</label>
+                            <select id="accZone" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                                ${ZONES_DATA.map(z => `<option>${z.name}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <input type="hidden" id="accDosh" value="Pending Review">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Injured Person & Incident Description</label>
+                        <input type="text" id="accPerson" required placeholder="e.g. Operator name & brief injury/incident details" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Immediate Cause / What Happened</label>
+                        <textarea id="accCause" required placeholder="Describe how the incident happened and immediate action taken..." class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2"></textarea>
+                    </div>
+                    ${getPhotoInputHtml()}
+                    <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm shadow-md">
+                        <i class="fa-solid fa-paper-plane mr-1.5"></i> Submit Public Accident Report
+                    </button>
+                </form>
+            `);
+            renderModalPhotoPreviews();
+        }
+
         function saveAccident(e, editIndex) {
             e.preventDefault();
             const isEdit = editIndex !== null && editIndex !== undefined;
             const existing = isEdit ? accidentData[editIndex] : null;
+            const customDatetime = document.getElementById('accDatetime')?.value?.trim();
+            const publicReporter = document.getElementById('accReporter')?.value?.trim();
+            const personVal = document.getElementById('accPerson').value.trim();
 
             const record = {
                 id: isEdit ? existing.id : `INC-2026-00${accidentData.length + 4}`,
-                datetime: isEdit ? existing.datetime : `${new Date().toISOString().split('T')[0]} 10:00`,
+                datetime: customDatetime || (isEdit ? existing.datetime : `${new Date().toISOString().split('T')[0]} 10:00`),
                 type: document.getElementById('accType').value,
                 zone: document.getElementById('accZone').value,
-                person: document.getElementById('accPerson').value,
+                person: publicReporter ? `${personVal} (Reported by: ${publicReporter})` : personVal,
                 cause: document.getElementById('accCause').value,
-                dosh: document.getElementById('accDosh').value,
+                dosh: document.getElementById('accDosh')?.value || "Pending Review",
                 status: isEdit ? existing.status : "Open",
                 photos: [...pendingPhotos]
             };
@@ -3849,6 +3953,7 @@
             saveUauc,
             deleteUauc,
             openAccidentModal,
+            openPublicAccidentModal,
             saveAccident,
             deleteAccident,
             loadAdminZoneParameters,
