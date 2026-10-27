@@ -1802,6 +1802,7 @@
 
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('mainDashboard').classList.remove('hidden');
+            renderZonesGrid();
             showToast(`Welcome, ${currentUser.name} (${currentUser.role})!`);
         }
 
@@ -1828,29 +1829,89 @@
         }
 
         // --- RENDER 9 ZONES GRID ---
+        function getZoneMonthlyStatus(zone) {
+            const now = new Date();
+            const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const monthLabel = now.toLocaleDateString('en-MY', { month: 'long', year: 'numeric' });
+
+            // Find all logs submitted for this zone during the current month
+            const monthlyLogs = zoneInspectionLogs.filter(log => {
+                const isSameZone = log.zoneId === zone.id || log.zone === zone.name;
+                const isCurrentMonth = typeof log.date === 'string' && log.date.startsWith(currentYearMonth);
+                return isSameZone && isCurrentMonth;
+            });
+
+            // Check if current logged-in personnel is assigned to this zone
+            const isAssignedToCurrentUser = Boolean(
+                currentUser &&
+                currentUser.assignedZone &&
+                (currentUser.assignedZone === zone.name || currentUser.assignedZone.includes('All Zones'))
+            );
+
+            // Check logs by current user this month
+            const userMonthlyLogs = monthlyLogs.filter(
+                log => currentUser && log.inspector && log.inspector.toLowerCase() === currentUser.name.toLowerCase()
+            );
+
+            return {
+                completedThisMonth: monthlyLogs.length > 0,
+                totalMonthlyCount: monthlyLogs.length,
+                userMonthlyCount: userMonthlyLogs.length,
+                lastLog: monthlyLogs[0] || null,
+                isAssignedToCurrentUser,
+                monthLabel
+            };
+        }
+
         function renderZonesGrid() {
             const container = document.getElementById('zonesGrid');
             if (!container) return;
             container.innerHTML = '';
 
             ZONES_DATA.forEach((zone) => {
+                const status = getZoneMonthlyStatus(zone);
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between";
+                card.className = status.completedThisMonth
+                    ? "bg-white rounded-2xl border-2 border-emerald-400 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between relative"
+                    : "bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between relative";
+
+                const completedBadgeHtml = status.completedThisMonth
+                    ? `<div class="mb-3 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-2">
+                        <i class="fa-solid fa-circle-check text-emerald-600 mt-0.5"></i>
+                        <div class="text-xs">
+                            <span class="font-bold text-emerald-900 block">Completed for ${status.monthLabel} (${status.totalMonthlyCount}x)</span>
+                            <span class="text-[11px] text-emerald-700">Last by <strong>${status.lastLog.inspector}</strong> on ${status.lastLog.date} (${status.lastLog.score})</span>
+                        </div>
+                       </div>`
+                    : `<div class="mb-3 p-2 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-center gap-2 text-xs text-amber-800">
+                        <i class="fa-regular fa-clock text-amber-600"></i>
+                        <span class="font-medium">Pending Inspection for ${status.monthLabel}</span>
+                       </div>`;
+
+                const assignedBadgeHtml = status.isAssignedToCurrentUser
+                    ? `<span class="px-2 py-0.5 bg-brand-50 text-brand-700 border border-brand-200 text-[10px] font-bold rounded-md">Assigned to You</span>`
+                    : '';
+
                 card.innerHTML = `
                     <div>
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center text-brand-600 text-xl font-bold">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-12 h-12 ${status.completedThisMonth ? 'bg-emerald-50 text-emerald-600' : 'bg-brand-50 text-brand-600'} rounded-xl flex items-center justify-center text-xl font-bold">
                                 <i class="fa-solid ${zone.icon}"></i>
                             </div>
-                            <span class="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg">
-                                ${zone.parameters.length} Parameters
-                            </span>
+                            <div class="flex flex-col items-end gap-1">
+                                <span class="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg">
+                                    ${zone.parameters.length} Parameters
+                                </span>
+                                ${assignedBadgeHtml}
+                            </div>
                         </div>
                         <h3 class="font-bold text-slate-900 text-base mb-2">${zone.name}</h3>
+                        ${completedBadgeHtml}
                         <p class="text-xs text-slate-500 mb-4 line-clamp-2">Includes safety checks for ${zone.parameters.map(p => p.name).join(', ')}.</p>
                     </div>
-                    <button onclick="startZoneInspection('${zone.id}')" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-clipboard-check"></i> Start Inspection
+                    <button onclick="startZoneInspection('${zone.id}')" class="w-full py-2.5 ${status.completedThisMonth ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-brand-600 hover:bg-brand-700'} text-white font-semibold rounded-xl text-sm transition flex items-center justify-center gap-2">
+                        <i class="fa-solid ${status.completedThisMonth ? 'fa-rotate-right' : 'fa-clipboard-check'}"></i>
+                        ${status.completedThisMonth ? 'Inspect Again (Completed)' : 'Start Inspection'}
                     </button>
                 `;
                 container.appendChild(card);
@@ -1998,9 +2059,50 @@
         }
 
         // --- START ZONE INSPECTION MODAL (WITH PHOTO ATTACHMENT) ---
-        function startZoneInspection(zoneId) {
+        function startZoneInspection(zoneId, confirmedRepeat = false) {
             const zone = ZONES_DATA.find(z => z.id === zoneId);
             if (!zone) return;
+
+            const status = getZoneMonthlyStatus(zone);
+            if (status.completedThisMonth && !confirmedRepeat) {
+                openModal(`
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start border-b border-slate-200 pb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-11 h-11 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+                                    <i class="fa-solid fa-circle-exclamation"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-base sm:text-lg font-bold text-slate-900">Zone Already Inspected This Month</h3>
+                                    <p class="text-xs text-slate-500">Confirmation required for repeat inspection</p>
+                                </div>
+                            </div>
+                            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                        </div>
+
+                        <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-200 space-y-1.5 text-xs text-emerald-950">
+                            <p class="font-bold text-sm text-emerald-900"><i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> ${zone.name}</p>
+                            <p>This zone has already been completed <strong>${status.totalMonthlyCount} time(s)</strong> in <strong>${status.monthLabel}</strong>.</p>
+                            <p class="text-[11px] text-emerald-800">Latest submission: <strong>${status.lastLog.inspector}</strong> on <strong>${status.lastLog.date}</strong> (Score: <strong>${status.lastLog.score}</strong>)</p>
+                        </div>
+
+                        <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+                            Are you sure you want to proceed and submit <strong>another inspection</strong> for this same zone?
+                        </p>
+
+                        <div class="flex justify-end gap-2.5 pt-2 border-t border-slate-200">
+                            <button type="button" onclick="closeModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">
+                                Cancel
+                            </button>
+                            <button type="button" onclick="startZoneInspection('${zone.id}', true)" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-clipboard-check"></i> Yes, Submit Another Inspection
+                            </button>
+                        </div>
+                    </div>
+                `);
+                return;
+            }
+
             pendingPhotos = [];
 
             let html = `
