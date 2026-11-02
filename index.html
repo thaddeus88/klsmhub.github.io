@@ -76,8 +76,8 @@
                             <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-600 text-white text-2xl font-bold shadow-lg shadow-brand-500/30 mb-3">
                                 <i class="fa-solid fa-shield-halved"></i>
                             </div>
-                            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">KLSM Inspection Hub</h1>
-                            <p class="text-xs sm:text-sm text-slate-500 mt-1">Safety, Environment & Operational Compliance</p>
+                            <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">KIM LOONG SABAH MILLS SDN BHD</h1>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-1">KLSM Inspection Hub</p>
                         </div>
 
                         <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
@@ -122,7 +122,7 @@
                     </div>
 
                     <div class="mt-5 pt-4 border-t border-slate-200 flex flex-col items-center gap-2.5 text-center text-xs text-slate-400">
-                        <span>KLSM Palm Oil Mill Safety Portal &bull; Version 3.0 (Mobile Ready)</span>
+                        <span>2026 KLSM HSSE &bull; Version 3.0 (Mobile Ready)</span>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                             <button type="button" onclick="openFirebaseSetupModal()" class="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 text-xs">
                                 <i class="fa-solid fa-cloud-bolt text-amber-600"></i> Link Firebase Cloud
@@ -340,6 +340,79 @@
                             <div class="h-64 flex justify-center">
                                 <canvas id="chartUaucDistribution"></canvas>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Personnel Inspection Target & Achievement Monitor -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-bold text-slate-900 text-base">Personnel Inspection Target & Achievement Monitor</h3>
+                                    <span id="teamTargetSummaryBadge" class="px-2.5 py-0.5 bg-brand-50 text-brand-700 border border-brand-200 text-xs font-bold rounded-full">0 / 0 Met</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-0.5">Live tracking of individual inspection targets (Weekly & Monthly) against submitted Zone Inspections</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs font-semibold text-slate-600 whitespace-nowrap">Evaluation View:</label>
+                                <select id="targetMonitorPeriodFilter" onchange="renderPersonnelTargetAchievement()" class="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-brand-500">
+                                    <option value="ACTIVE_PERIOD">Current Active Period (This Week / This Month)</option>
+                                    <option value="MONTHLY_TOTAL">Monthly Normalized Target (Current Month)</option>
+                                    <option value="ALL_LOGS">All Recorded Inspections vs Target</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Mini Summary Strip -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-50/80 border-b border-slate-200">
+                            <div class="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                <div>
+                                    <span class="text-[11px] font-semibold uppercase text-slate-400 block">Total Personnel</span>
+                                    <span id="targetStatTotalStaff" class="text-lg font-bold text-slate-800">0</span>
+                                </div>
+                                <i class="fa-solid fa-users text-slate-400 text-lg"></i>
+                            </div>
+                            <div class="bg-white p-3 rounded-xl border border-emerald-200 flex items-center justify-between">
+                                <div>
+                                    <span class="text-[11px] font-semibold uppercase text-emerald-600 block">Target Achieved</span>
+                                    <span id="targetStatMetCount" class="text-lg font-bold text-emerald-700">0</span>
+                                </div>
+                                <i class="fa-solid fa-trophy text-emerald-500 text-lg"></i>
+                            </div>
+                            <div class="bg-white p-3 rounded-xl border border-amber-200 flex items-center justify-between">
+                                <div>
+                                    <span class="text-[11px] font-semibold uppercase text-amber-600 block">Pending / In Progress</span>
+                                    <span id="targetStatPendingCount" class="text-lg font-bold text-amber-700">0</span>
+                                </div>
+                                <i class="fa-solid fa-hourglass-half text-amber-500 text-lg"></i>
+                            </div>
+                            <div class="bg-white p-3 rounded-xl border border-brand-200 flex items-center justify-between">
+                                <div>
+                                    <span class="text-[11px] font-semibold uppercase text-brand-600 block">Team Achievement</span>
+                                    <span id="targetStatTeamRate" class="text-lg font-bold text-brand-700">0%</span>
+                                </div>
+                                <i class="fa-solid fa-chart-line text-brand-500 text-lg"></i>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
+                                    <tr>
+                                        <th class="p-4">Personnel Name</th>
+                                        <th class="p-4">Assigned Zone(s)</th>
+                                        <th class="p-4">Duty Schedule</th>
+                                        <th class="p-4">Set Target</th>
+                                        <th class="p-4 text-center">Completed / Target</th>
+                                        <th class="p-4 w-48">Achievement Progress</th>
+                                        <th class="p-4">Last Inspection</th>
+                                        <th class="p-4 text-center">Target Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="personnelTargetTableBody" class="divide-y divide-slate-200 bg-white">
+                                    <!-- Populated dynamically by renderPersonnelTargetAchievement() -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -1290,6 +1363,7 @@
             renderAccidentTable();
             renderAdminZoneOptions();
             renderPersonnelList();
+            renderPersonnelTargetAchievement();
             renderAlertTable();
             renderRecycleBin();
             syncSecurityInputs();
@@ -1577,6 +1651,174 @@
                     statCompliance.textContent = `${avg}%`;
                 }
             }
+        }
+
+        // --- PERSONNEL INSPECTION TARGET & ACHIEVEMENT MONITOR ---
+        function renderPersonnelTargetAchievement() {
+            const tbody = document.getElementById('personnelTargetTableBody');
+            if (!tbody) return;
+
+            const filterMode = document.getElementById('targetMonitorPeriodFilter')?.value || 'ACTIVE_PERIOD';
+            const now = new Date();
+            const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+            // Calculate current week Monday 00:00:00 to Sunday 23:59:59
+            const dayOfWeek = now.getDay();
+            const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const weekStart = new Date(now);
+            weekStart.setHours(0, 0, 0, 0);
+            weekStart.setDate(now.getDate() + diffToMonday);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            weekEnd.setHours(23, 59, 59, 999);
+
+            let metCount = 0;
+            let pendingCount = 0;
+            let totalPctSum = 0;
+
+            tbody.innerHTML = '';
+
+            personnelData.forEach((staff) => {
+                const staffNameLower = (staff.name || '').trim().toLowerCase();
+                const baseTarget = Math.max(1, parseInt(staff.targetFrequency, 10) || 1);
+                const periodType = staff.frequencyPeriod || 'Weekly';
+
+                // All logs submitted by this personnel
+                const staffLogs = zoneInspectionLogs.filter(
+                    l => l.inspector && l.inspector.trim().toLowerCase() === staffNameLower
+                );
+
+                // Logs in current month
+                const monthlyLogs = staffLogs.filter(
+                    l => typeof l.date === 'string' && l.date.startsWith(currentYearMonth)
+                );
+
+                // Logs in current week
+                const weeklyLogs = staffLogs.filter(l => {
+                    if (!l.date) return false;
+                    const parsed = new Date(l.date + 'T12:00:00');
+                    return !isNaN(parsed) && parsed >= weekStart && parsed <= weekEnd;
+                });
+
+                let completedCount = 0;
+                let effectiveTarget = baseTarget;
+                let periodSubtitle = '';
+
+                if (filterMode === 'ACTIVE_PERIOD') {
+                    if (periodType === 'Weekly') {
+                        completedCount = weeklyLogs.length;
+                        effectiveTarget = baseTarget;
+                        periodSubtitle = 'This Week';
+                    } else {
+                        completedCount = monthlyLogs.length;
+                        effectiveTarget = baseTarget;
+                        periodSubtitle = 'This Month';
+                    }
+                } else if (filterMode === 'MONTHLY_TOTAL') {
+                    completedCount = monthlyLogs.length;
+                    effectiveTarget = periodType === 'Weekly' ? baseTarget * 4 : baseTarget;
+                    periodSubtitle = periodType === 'Weekly' ? `Monthly (${baseTarget}x4)` : 'This Month';
+                } else {
+                    completedCount = staffLogs.length;
+                    effectiveTarget = baseTarget;
+                    periodSubtitle = 'All Logs';
+                }
+
+                const rawPct = Math.round((completedCount / effectiveTarget) * 100);
+                const cappedPct = Math.min(100, rawPct);
+                totalPctSum += cappedPct;
+
+                const isMet = completedCount >= effectiveTarget;
+                if (isMet) metCount++;
+                else pendingCount++;
+
+                // Status badge & progress bar colors
+                let statusBadge = '';
+                let barColor = 'bg-brand-600';
+                if (isMet) {
+                    statusBadge = `<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full inline-flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> Target Met</span>`;
+                    barColor = 'bg-emerald-500';
+                } else if (completedCount > 0) {
+                    statusBadge = `<span class="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full inline-flex items-center gap-1"><i class="fa-solid fa-clock"></i> In Progress</span>`;
+                    barColor = 'bg-amber-500';
+                } else {
+                    statusBadge = `<span class="px-2.5 py-1 bg-rose-100 text-rose-800 text-xs font-bold rounded-full inline-flex items-center gap-1"><i class="fa-solid fa-circle-exclamation"></i> Not Started</span>`;
+                    barColor = 'bg-rose-500';
+                }
+
+                const zonesList = getStaffAssignedZonesArray(staff);
+                const zonesHtml = zonesList.length > 0
+                    ? `<div class="flex flex-wrap gap-1 max-w-[220px]">
+                        ${zonesList.map(z => `<span class="px-1.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded text-[10px] font-medium truncate max-w-[200px]" title="${z}">${z.includes('–') ? z.split('–')[0].trim() : z}</span>`).join('')}
+                       </div>`
+                    : `<span class="text-xs text-slate-400">All Zones</span>`;
+
+                const latestLog = staffLogs[0];
+                const lastInspectHtml = latestLog
+                    ? `<div class="text-xs">
+                        <span class="font-semibold text-slate-800 block">${latestLog.date}</span>
+                        <span class="text-[10px] text-emerald-600 font-semibold">Score: ${latestLog.score}</span>
+                       </div>`
+                    : `<span class="text-xs text-slate-400 italic">No submissions yet</span>`;
+
+                const roleBadge = staff.role === 'Admin'
+                    ? `<span class="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded text-[10px] font-bold">Admin</span>`
+                    : `<span class="px-1.5 py-0.5 bg-brand-50 text-brand-700 rounded text-[10px] font-bold">Inspector</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition";
+                tr.innerHTML = `
+                    <td class="p-4">
+                        <div class="font-bold text-slate-900">${staff.name}</div>
+                        <div class="mt-0.5">${roleBadge}</div>
+                    </td>
+                    <td class="p-4">${zonesHtml}</td>
+                    <td class="p-4 text-xs text-slate-600">
+                        <div><i class="fa-regular fa-clock text-slate-400 mr-1"></i>${staff.timeWindow || '08:00 - 12:00'}</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">Offday: ${staff.offday || 'Sunday'}</div>
+                    </td>
+                    <td class="p-4">
+                        <span class="px-2.5 py-1 bg-slate-100 text-slate-800 text-xs font-bold rounded-lg">
+                            ${baseTarget}x / ${periodType}
+                        </span>
+                    </td>
+                    <td class="p-4 text-center">
+                        <span class="text-sm font-bold ${isMet ? 'text-emerald-700' : 'text-slate-900'}">${completedCount}</span>
+                        <span class="text-xs text-slate-400"> / ${effectiveTarget}</span>
+                        <span class="block text-[10px] text-slate-400">${periodSubtitle}</span>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex items-center justify-between text-xs mb-1">
+                            <span class="font-bold ${isMet ? 'text-emerald-700' : 'text-slate-700'}">${rawPct}%</span>
+                            <span class="text-[10px] text-slate-400">${completedCount >= effectiveTarget ? 'Completed' : `${effectiveTarget - completedCount} left`}</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
+                            <div class="h-full ${barColor} rounded-full transition-all duration-300" style="width: ${cappedPct}%"></div>
+                        </div>
+                    </td>
+                    <td class="p-4">${lastInspectHtml}</td>
+                    <td class="p-4 text-center whitespace-nowrap">${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const totalStaff = personnelData.length;
+            const avgTeamRate = totalStaff > 0 ? Math.round(totalPctSum / totalStaff) : 0;
+
+            const badgeEl = document.getElementById('teamTargetSummaryBadge');
+            if (badgeEl) badgeEl.textContent = `${metCount} / ${totalStaff} Target Met`;
+
+            const totalEl = document.getElementById('targetStatTotalStaff');
+            if (totalEl) totalEl.textContent = totalStaff;
+
+            const metEl = document.getElementById('targetStatMetCount');
+            if (metEl) metEl.textContent = `${metCount} Staff`;
+
+            const pendingEl = document.getElementById('targetStatPendingCount');
+            if (pendingEl) pendingEl.textContent = `${pendingCount} Staff`;
+
+            const rateEl = document.getElementById('targetStatTeamRate');
+            if (rateEl) rateEl.textContent = `${avgTeamRate}%`;
         }
 
         // --- MULTI-PHOTO ATTACHMENT HELPER (CAMERA + GALLERY + REMOVE OPTION) ---
@@ -4239,6 +4481,7 @@
             editPersonnel,
             resetPersonnelForm,
             deletePersonnel,
+            renderPersonnelTargetAchievement,
             exportDataReport,
             openPublishGuideModal,
             openFirebaseSetupModal,
