@@ -1231,39 +1231,97 @@
         };
 
         // --- HELPER: MERGE ARRAYS BY UNIQUE KEY (LOCAL NEW ITEMS KEPT AT TOP) ---
-        function mergeArraysByKey(localArr, cloudArr, keyFn, deletedKeysSet = new Set()) {
+        function isRecordClosedStatus(statusVal) {
+            const s = String(statusVal || '').trim().toLowerCase();
+            return s === 'closed' || s === 'resolved';
+        }
+
+        function pickMergedRecord(localItem, cloudItem, preferCloud = false) {
+            if (!cloudItem) return localItem;
+            if (!localItem) return cloudItem;
+
+            const localTs = Number(localItem.updatedAt || 0);
+            const cloudTs = Number(cloudItem.updatedAt || 0);
+
+            let winner;
+            if (localTs > 0 || cloudTs > 0) {
+                if (cloudTs > localTs) {
+                    winner = { ...localItem, ...cloudItem };
+                } else if (localTs > cloudTs) {
+                    winner = { ...cloudItem, ...localItem };
+                } else {
+                    winner = preferCloud ? { ...localItem, ...cloudItem } : { ...cloudItem, ...localItem };
+                }
+            } else {
+                // For existing records without an updatedAt timestamp, if either device marked it Closed, keep Closed status
+                const localClosed = isRecordClosedStatus(localItem.status);
+                const cloudClosed = isRecordClosedStatus(cloudItem.status);
+                if (cloudClosed && !localClosed) {
+                    winner = { ...localItem, ...cloudItem };
+                } else if (localClosed && !cloudClosed) {
+                    winner = { ...cloudItem, ...localItem, updatedAt: Date.now() };
+                } else {
+                    winner = preferCloud ? { ...localItem, ...cloudItem } : { ...cloudItem, ...localItem };
+                }
+            }
+
+            // Preserve attached photos if one version has them and wasn't explicitly cleared
+            const fallbackPhotos = (cloudItem.photos && cloudItem.photos.length > 0)
+                ? cloudItem.photos
+                : ((localItem.photos && localItem.photos.length > 0) ? localItem.photos : []);
+            if ((!winner.photos || winner.photos.length === 0) && fallbackPhotos.length > 0 && !winner.photosCleared) {
+                winner.photos = fallbackPhotos;
+            }
+            return winner;
+        }
+
+        function mergeArraysByKey(localArr, cloudArr, keyFn, deletedKeysSet = new Set(), preferCloud = false) {
             const cloudMap = new Map();
+            const cloudSecondaryMap = new Map();
             (cloudArr || []).forEach(item => {
                 if (!item) return;
                 const k = keyFn(item);
                 if (!deletedKeysSet.has(k)) {
                     cloudMap.set(k, item);
+                    if (item.date && item.zone && item.observation) {
+                        cloudSecondaryMap.set(`${item.date}_${item.zone}_${String(item.observation).trim()}`, item);
+                    }
                 }
             });
 
             const result = [];
             const seenKeys = new Set();
+            const seenSecondaryKeys = new Set();
 
-            // 1. Add local items first so newly unshifted items stay at the top of the list
+            // 1. Merge items present in localArr (applying newer cloud updates or closed status upgrades)
             (localArr || []).forEach(item => {
                 if (!item) return;
                 const k = keyFn(item);
-                if (deletedKeysSet.has(k) || seenKeys.has(k)) return;
+                const secKey = (item.date && item.zone && item.observation)
+                    ? `${item.date}_${item.zone}_${String(item.observation).trim()}`
+                    : null;
+                if (deletedKeysSet.has(k) || seenKeys.has(k) || (secKey && seenSecondaryKeys.has(secKey))) return;
+
+                const matchingCloud = cloudMap.get(k) || (secKey ? cloudSecondaryMap.get(secKey) : null);
+                const merged = matchingCloud ? pickMergedRecord(item, matchingCloud, preferCloud) : item;
+                const finalKey = keyFn(merged);
+
                 seenKeys.add(k);
-                const existing = cloudMap.get(k);
-                if (existing && (!item.photos || item.photos.length === 0) && existing.photos && existing.photos.length > 0) {
-                    result.push({ ...item, photos: existing.photos });
-                } else {
-                    result.push(item);
-                }
+                seenKeys.add(finalKey);
+                if (secKey) seenSecondaryKeys.add(secKey);
+                result.push(merged);
             });
 
-            // 2. Add any cloud items not present locally
+            // 2. Add any cloud items not yet in result
             (cloudArr || []).forEach(item => {
                 if (!item) return;
                 const k = keyFn(item);
-                if (deletedKeysSet.has(k) || seenKeys.has(k)) return;
+                const secKey = (item.date && item.zone && item.observation)
+                    ? `${item.date}_${item.zone}_${String(item.observation).trim()}`
+                    : null;
+                if (deletedKeysSet.has(k) || seenKeys.has(k) || (secKey && seenSecondaryKeys.has(secKey))) return;
                 seenKeys.add(k);
+                if (secKey) seenSecondaryKeys.add(secKey);
                 result.push(item);
             });
 
@@ -1506,7 +1564,9 @@
                                             uaucData = mergeArraysByKey(
                                                 uaucData,
                                                 extraUauc,
-                                                u => u.id || `${u.date}_${u.zone}_${u.observation}`
+                                                u => u.id || `${u.date}_${u.zone}_${u.observation}`,
+                                                getRecycleBinDeletedKeysSet(),
+                                                true
                                             );
                                         }
                                     }
@@ -1561,39 +1621,39 @@
             if (data.fireExtinguishers) {
                 try {
                     const cloudExt = JSON.parse(data.fireExtinguishers);
-                    fireExtinguishers = mergeArraysByKey(cloudExt, [], f => f.id || `${f.zone}_${f.type}`, deletedKeys);
+                    fireExtinguishers = mergeArraysByKey(fireExtinguishers, cloudExt, f => f.id || `${f.zone}_${f.type}`, deletedKeys, true);
                 } catch (e) {}
             }
             if (data.firePumps) {
                 try {
                     const cloudPumps = filterOutLegacyDummyPumps(JSON.parse(data.firePumps));
                     firePumps = filterOutLegacyDummyPumps(
-                        mergeArraysByKey(cloudPumps, [], p => p.id || `${p.name}_${p.equipCategory}`, deletedKeys)
+                        mergeArraysByKey(firePumps, cloudPumps, p => p.id || `${p.name}_${p.equipCategory}`, deletedKeys, true)
                     );
                 } catch (e) {}
             }
             if (data.carParData) {
                 try {
                     const cloudCars = JSON.parse(data.carParData);
-                    carParData = mergeArraysByKey(carParData, cloudCars, c => c.ref || `${c.dateIssued}_${c.detail}`, deletedKeys);
+                    carParData = mergeArraysByKey(carParData, cloudCars, c => c.ref || `${c.dateIssued}_${c.detail}`, deletedKeys, true);
                 } catch (e) {}
             }
             if (data.uaucData) {
                 try {
                     const cloudUauc = JSON.parse(data.uaucData);
-                    uaucData = mergeArraysByKey(uaucData, cloudUauc, u => u.id || `${u.date}_${u.zone}_${u.observation}`, deletedKeys);
+                    uaucData = mergeArraysByKey(uaucData, cloudUauc, u => u.id || `${u.date}_${u.zone}_${u.observation}`, deletedKeys, true);
                 } catch (e) {}
             }
             if (data.accidentData) {
                 try {
                     const cloudAcc = JSON.parse(data.accidentData);
-                    accidentData = mergeArraysByKey(accidentData, cloudAcc, a => a.id || `${a.datetime}_${a.person}`, deletedKeys);
+                    accidentData = mergeArraysByKey(accidentData, cloudAcc, a => a.id || `${a.datetime}_${a.person}`, deletedKeys, true);
                 } catch (e) {}
             }
             if (data.zoneInspectionLogs) {
                 try {
                     const cloudLogs = JSON.parse(data.zoneInspectionLogs);
-                    zoneInspectionLogs = mergeArraysByKey(zoneInspectionLogs, cloudLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys);
+                    zoneInspectionLogs = mergeArraysByKey(zoneInspectionLogs, cloudLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys, true);
                 } catch (e) {}
             }
             if (data.personnelData) {
@@ -2105,7 +2165,7 @@
             const statUaucCount = document.getElementById('statUaucCount');
             if (statUaucCount) statUaucCount.textContent = `${uaucData.length} Reports`;
 
-            const resolvedUauc = uaucData.filter(u => u.status === 'Closed').length;
+            const resolvedUauc = uaucData.filter(u => isRecordClosedStatus(u.status)).length;
             const statUaucResolved = document.getElementById('statUaucResolved');
             if (statUaucResolved) statUaucResolved.textContent = `${resolvedUauc} Resolved / Closed`;
 
@@ -3834,7 +3894,8 @@
                 status: document.getElementById('carStatus').value,
                 detail: document.getElementById('carDetail').value.trim(),
                 actionTaken: document.getElementById('carActionTaken').value.trim(),
-                photos: [...pendingPhotos]
+                photos: [...pendingPhotos],
+                updatedAt: Date.now()
             };
 
             pendingPhotos = [];
@@ -3874,9 +3935,10 @@
                 if (item.category === 'Unsafe Act') catClass = 'text-amber-600';
                 else if (item.category.includes('Non-Conformance')) catClass = 'text-rose-600';
 
-                const statusBadge = item.status === 'Closed'
+                const isClosed = isRecordClosedStatus(item.status);
+                const statusBadge = isClosed
                     ? `<span class="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">Closed</span>`
-                    : `<span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">${item.status}</span>`;
+                    : `<span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">${item.status || 'In Progress'}</span>`;
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -4070,18 +4132,22 @@
             const existing = isEdit ? uaucData[editIndex] : null;
             const reporterInput = document.getElementById('uaucReporter')?.value?.trim();
             const selectedCat = document.getElementById('uaucCategory')?.value || "Unsafe Condition";
+            const dateVal = document.getElementById('uaucDate').value;
+            const zoneVal = document.getElementById('uaucZone').value;
+            const obsVal = document.getElementById('uaucObs').value.trim();
 
             const record = {
-                id: isEdit ? existing.id : `UAUC-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-                date: document.getElementById('uaucDate').value,
+                id: (isEdit && existing?.id) ? existing.id : `UAUC-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                date: dateVal,
                 category: selectedCat,
-                zone: document.getElementById('uaucZone').value,
-                observation: document.getElementById('uaucObs').value.trim(),
+                zone: zoneVal,
+                observation: obsVal,
                 immediateAction: document.getElementById('uaucAction').value.trim(),
                 reporter: reporterInput || (isEdit ? existing.reporter : currentUser.name),
                 risk: document.getElementById('uaucRisk').value,
                 status: document.getElementById('uaucStatus').value,
-                photos: [...pendingPhotos]
+                photos: [...pendingPhotos],
+                updatedAt: Date.now()
             };
 
             pendingPhotos = [];
