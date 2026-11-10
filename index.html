@@ -118,7 +118,7 @@
                     </div>
 
                     <div class="mt-5 pt-4 border-t border-slate-200 flex flex-col items-center gap-2.5 text-center text-xs text-slate-400">
-                        <span>2026 KLSM HSSE  • Version 3.0 (Mobile Ready)</span>
+                        <span>2026 KLSM HSSE  • Version 3.1 (Mobile Ready)</span>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                             <button type="button" onclick="openFirebaseSetupModal()" class="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 text-xs">
                                 <i class="fa-solid fa-cloud-bolt text-amber-600"></i> Link Firebase Cloud
@@ -275,8 +275,11 @@
                         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Zone Compliance Rate</p>
-                                <h3 id="statCompliance" class="text-2xl font-bold text-emerald-600 mt-1">80.0%</h3>
-                                <p class="text-xs text-slate-500 mt-1">Based on last 30 inspections</p>
+                                <div class="flex items-baseline gap-2 mt-1">
+                                    <h3 id="statCompliance" class="text-2xl font-bold text-emerald-600">0.0%</h3>
+                                    <span id="statComplianceCurrLabel" class="text-[11px] font-semibold text-slate-500">This Month</span>
+                                </div>
+                                <p id="statComplianceSub" class="text-xs text-slate-500 mt-1">vs Last Month: 80.0%</p>
                             </div>
                             <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 text-xl">
                                 <i class="fa-solid fa-circle-check"></i>
@@ -322,7 +325,7 @@
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="text-base font-bold text-slate-900">Inspection Compliance by Zone (%)</h3>
-                                <span class="text-xs text-slate-500">Live from Zone Submissions</span>
+                                <span id="chartZoneMonthComparisonLabel" class="text-xs text-slate-500">Current Month vs Last Month</span>
                             </div>
                             <div class="h-64">
                                 <canvas id="chartZoneCompliance"></canvas>
@@ -411,25 +414,25 @@
                         </div>
                     </div>
 
-                    <!-- Upcoming Fire Extinguisher Expiry Table -->
+                    <!-- Upcoming Fire Extinguisher & Equipment Alert Table -->
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="p-5 border-b border-slate-200 flex justify-between items-center">
+                        <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div>
                                 <h3 class="font-bold text-slate-900">Fire Fighting Equipment Inspection Alert</h3>
-                                <p class="text-xs text-slate-500">Portable Fire Extinguishers requiring immediate hydrostatic test or servicing</p>
+                                <p class="text-xs text-slate-500">Portable Fire Extinguishers, Hose Reels, Fire Hydrants &amp; Fire Pumps requiring immediate action or servicing</p>
                             </div>
-                            <span class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">Attention Needed</span>
+                            <span id="fireAlertBadgeCount" class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full self-start sm:self-center">Attention Needed</span>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-sm">
                                 <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-xs">
                                     <tr>
-                                        <th class="p-4">Serial No.</th>
-                                        <th class="p-4">Type</th>
-                                        <th class="p-4">Mfg Year</th>
-                                        <th class="p-4">Location Zone</th>
-                                        <th class="p-4">Expiry Date</th>
-                                        <th class="p-4">Status</th>
+                                        <th class="p-4">Equipment / Serial No.</th>
+                                        <th class="p-4">Category / Type</th>
+                                        <th class="p-4">Mfg Year / Details</th>
+                                        <th class="p-4">Location / Defect</th>
+                                        <th class="p-4">Expiry / Last Test</th>
+                                        <th class="p-4">Alert Status</th>
                                         <th class="p-4 text-right">Action</th>
                                     </tr>
                                 </thead>
@@ -713,6 +716,7 @@
                                         <th class="p-3">Zone</th>
                                         <th class="p-3">Injured Person / Description</th>
                                         <th class="p-3">Root Cause</th>
+                                        <th class="p-3">Corrective &amp; Preventive Action Taken</th>
                                         <th class="p-3 text-center">Photo</th>
                                         <th class="p-3 text-center">DOSH Status</th>
                                         <th class="p-3 text-right">Actions</th>
@@ -1201,8 +1205,10 @@
         let customFirebaseConfig = null;
         let cloudInitPromise = null;
         let hasInitialCloudSnapshot = false;
+        let isSavingToCloud = false;
         let pendingPhotoProcessingCount = 0;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'klsm-inspection-hub';
+        const LOCAL_STORAGE_STATE_KEY = 'klsm_shared_state_backup_v3';
 
         // ============================================================================
         // PERMANENT MULTI-DEVICE FIREBASE CONFIG FOR GITHUB PAGES
@@ -1216,32 +1222,103 @@
             appId: "1:724914634355:web:0ec78b8644860338feb406"
         };
 
-        // --- HELPER: MERGE ARRAYS BY UNIQUE KEY SO MULTI-USER SUBMISSIONS NEVER OVERWRITE EACH OTHER ---
+        // --- HELPER: MERGE ARRAYS BY UNIQUE KEY (LOCAL NEW ITEMS KEPT AT TOP) ---
         function mergeArraysByKey(localArr, cloudArr, keyFn, deletedKeysSet = new Set()) {
-            const map = new Map();
-            // 1. Add cloud items first
+            const cloudMap = new Map();
             (cloudArr || []).forEach(item => {
                 if (!item) return;
                 const k = keyFn(item);
                 if (!deletedKeysSet.has(k)) {
-                    map.set(k, item);
+                    cloudMap.set(k, item);
                 }
             });
-            // 2. Overlay local items (so new local submissions or edits take precedence)
+
+            const result = [];
+            const seenKeys = new Set();
+
+            // 1. Add local items first so newly unshifted items stay at the top of the list
             (localArr || []).forEach(item => {
                 if (!item) return;
                 const k = keyFn(item);
-                if (!deletedKeysSet.has(k)) {
-                    const existing = map.get(k);
-                    // Preserve existing photos if local item has empty photos but cloud had photos
-                    if (existing && (!item.photos || item.photos.length === 0) && existing.photos && existing.photos.length > 0) {
-                        map.set(k, { ...item, photos: existing.photos });
-                    } else {
-                        map.set(k, item);
-                    }
+                if (deletedKeysSet.has(k) || seenKeys.has(k)) return;
+                seenKeys.add(k);
+                const existing = cloudMap.get(k);
+                if (existing && (!item.photos || item.photos.length === 0) && existing.photos && existing.photos.length > 0) {
+                    result.push({ ...item, photos: existing.photos });
+                } else {
+                    result.push(item);
                 }
             });
-            return Array.from(map.values());
+
+            // 2. Add any cloud items not present locally
+            (cloudArr || []).forEach(item => {
+                if (!item) return;
+                const k = keyFn(item);
+                if (deletedKeysSet.has(k) || seenKeys.has(k)) return;
+                seenKeys.add(k);
+                result.push(item);
+            });
+
+            return result;
+        }
+
+        function saveStateToLocalBackup() {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_STATE_KEY, JSON.stringify({
+                    zones: ZONES_DATA,
+                    fireExtinguishers,
+                    firePumps,
+                    carParData,
+                    uaucData,
+                    accidentData,
+                    zoneInspectionLogs,
+                    personnelData,
+                    securityConfig,
+                    recycleBinData: sanitizeRecycleBinForCloud(recycleBinData)
+                }));
+            } catch (e) {
+                console.warn("Local backup storage full, saving slim backup:", e);
+            }
+        }
+
+        function loadStateFromLocalBackup() {
+            try {
+                const raw = localStorage.getItem(LOCAL_STORAGE_STATE_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed.zones)) {
+                    parsed.zones.forEach((z, i) => { if (ZONES_DATA[i] && z.parameters) ZONES_DATA[i].parameters = z.parameters; });
+                }
+                if (Array.isArray(parsed.fireExtinguishers)) {
+                    fireExtinguishers = mergeArraysByKey(parsed.fireExtinguishers, fireExtinguishers, f => f.id || `${f.zone}_${f.type}`);
+                }
+                if (Array.isArray(parsed.firePumps)) {
+                    firePumps = mergeArraysByKey(parsed.firePumps, firePumps, p => p.id || `${p.name}_${p.equipCategory}`);
+                }
+                if (Array.isArray(parsed.carParData)) {
+                    carParData = mergeArraysByKey(parsed.carParData, carParData, c => c.ref || `${c.dateIssued}_${c.detail}`);
+                }
+                if (Array.isArray(parsed.uaucData)) {
+                    uaucData = mergeArraysByKey(parsed.uaucData, uaucData, u => u.id || `${u.date}_${u.zone}_${u.observation}`);
+                }
+                if (Array.isArray(parsed.accidentData)) {
+                    accidentData = mergeArraysByKey(parsed.accidentData, accidentData, a => a.id || `${a.datetime}_${a.person}`);
+                }
+                if (Array.isArray(parsed.zoneInspectionLogs)) {
+                    zoneInspectionLogs = mergeArraysByKey(parsed.zoneInspectionLogs, zoneInspectionLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`);
+                }
+                if (Array.isArray(parsed.personnelData) && parsed.personnelData.length > 0) {
+                    personnelData = parsed.personnelData;
+                }
+                if (parsed.securityConfig) {
+                    securityConfig = parsed.securityConfig;
+                }
+                if (Array.isArray(parsed.recycleBinData)) {
+                    recycleBinData = parsed.recycleBinData;
+                }
+            } catch (e) {
+                console.warn("Could not load local state backup:", e);
+            }
         }
 
         // --- HELPER: SLIM RECYCLE BIN TO PREVENT FIRESTORE 1MB DOCUMENT OVERFLOW ---
@@ -1369,6 +1446,7 @@
                     }
 
                     onSnapshot(stateDocRef, async (snapshot) => {
+                        if (isSavingToCloud) return;
                         if (snapshot.exists()) {
                             const data = snapshot.data();
                             applyCloudSnapshotData(data);
@@ -1400,6 +1478,8 @@
                                     console.warn("Could not read overflow logs:", ovErr);
                                 }
                             }
+
+                            saveStateToLocalBackup();
 
                             // If this device had unsynced offline submissions, push them up now
                             if (localStorage.getItem('klsm_unsynced_submissions')) {
@@ -1438,22 +1518,40 @@
                 } catch (e) {}
             }
             if (data.fireExtinguishers) {
-                try { fireExtinguishers = JSON.parse(data.fireExtinguishers); } catch (e) {}
+                try {
+                    const cloudExt = JSON.parse(data.fireExtinguishers);
+                    fireExtinguishers = mergeArraysByKey(fireExtinguishers, cloudExt, f => f.id || `${f.zone}_${f.type}`);
+                } catch (e) {}
             }
             if (data.firePumps) {
-                try { firePumps = JSON.parse(data.firePumps); } catch (e) {}
+                try {
+                    const cloudPumps = JSON.parse(data.firePumps);
+                    firePumps = mergeArraysByKey(firePumps, cloudPumps, p => p.id || `${p.name}_${p.equipCategory}`);
+                } catch (e) {}
             }
             if (data.carParData) {
-                try { carParData = JSON.parse(data.carParData); } catch (e) {}
+                try {
+                    const cloudCars = JSON.parse(data.carParData);
+                    carParData = mergeArraysByKey(carParData, cloudCars, c => c.ref || `${c.dateIssued}_${c.detail}`);
+                } catch (e) {}
             }
             if (data.uaucData) {
-                try { uaucData = JSON.parse(data.uaucData); } catch (e) {}
+                try {
+                    const cloudUauc = JSON.parse(data.uaucData);
+                    uaucData = mergeArraysByKey(uaucData, cloudUauc, u => u.id || `${u.date}_${u.zone}_${u.observation}`);
+                } catch (e) {}
             }
             if (data.accidentData) {
-                try { accidentData = JSON.parse(data.accidentData); } catch (e) {}
+                try {
+                    const cloudAcc = JSON.parse(data.accidentData);
+                    accidentData = mergeArraysByKey(accidentData, cloudAcc, a => a.id || `${a.datetime}_${a.person}`);
+                } catch (e) {}
             }
             if (data.zoneInspectionLogs) {
-                try { zoneInspectionLogs = JSON.parse(data.zoneInspectionLogs); } catch (e) {}
+                try {
+                    const cloudLogs = JSON.parse(data.zoneInspectionLogs);
+                    zoneInspectionLogs = mergeArraysByKey(zoneInspectionLogs, cloudLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`);
+                } catch (e) {}
             }
             if (data.personnelData) {
                 try { personnelData = JSON.parse(data.personnelData); } catch (e) {}
@@ -1469,13 +1567,14 @@
         // --- ROBUST CLOUD SAVE (MERGES MULTI-USER SUBMISSIONS + HANDLES 1MB FIRESTORE LIMIT) ---
         async function saveAllData(deletedKey = null) {
             recycleBinData = sanitizeRecycleBinForCloud(recycleBinData);
+            saveStateToLocalBackup();
             refreshAllViews();
 
             // Cache latest submissions in localStorage so nothing is lost if mobile signal drops
             try {
                 localStorage.setItem('klsm_unsynced_submissions', JSON.stringify({
                     zoneInspectionLogs: zoneInspectionLogs.slice(0, 15),
-                    uaucData: uaucData.slice(0, 15)
+                    uaucData: uaucData.slice(0, 25)
                 }));
             } catch (cacheErr) {}
 
@@ -1487,8 +1586,8 @@
                 currentUserUid = "user-" + crypto.randomUUID().substring(0, 8);
             }
             if (!db) {
-                showToast("Warning: Cloud database not connected yet. Saved to device queue.");
-                return false;
+                showToast("Saved on device! Will sync when Cloud connects.");
+                return true;
             }
 
             const statusTextEl = document.getElementById('cloudStatusText');
@@ -1496,6 +1595,7 @@
             if (statusTextEl) statusTextEl.textContent = "Syncing to Cloud...";
             if (statusDotEl) statusDotEl.className = "w-2 h-2 rounded-full bg-amber-500 animate-ping";
 
+            isSavingToCloud = true;
             try {
                 const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master');
                 const overflowDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master_logs_overflow');
@@ -1565,8 +1665,9 @@
                     console.warn("Merge pre-fetch skipped, proceeding with direct save:", mergeErr);
                 }
 
-                // Sort zoneInspectionLogs newest first
+                // Sort zoneInspectionLogs and uaucData newest first
                 zoneInspectionLogs.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+                uaucData.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 
                 // 2. Build payload and guard against Firestore's 1,048,576 byte (1 MB) per-document limit
                 let primaryLogs = [...zoneInspectionLogs];
@@ -1629,17 +1730,20 @@
 
                 // Clear unsynced queue now that cloud write succeeded
                 localStorage.removeItem('klsm_unsynced_submissions');
+                saveStateToLocalBackup();
 
                 if (statusTextEl) statusTextEl.textContent = "Live Cloud Sync";
                 if (statusDotEl) statusDotEl.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                isSavingToCloud = false;
                 refreshAllViews();
                 return true;
             } catch (err) {
+                isSavingToCloud = false;
                 console.error("Could not sync state to cloud:", err);
                 if (statusTextEl) statusTextEl.textContent = "Sync Retry Needed";
                 if (statusDotEl) statusDotEl.className = "w-2 h-2 rounded-full bg-rose-500";
-                showToast("Cloud sync warning: " + (err?.message || "Saved locally, click 'Sync Cloud Now' to retry."));
-                return false;
+                showToast("Saved on device! Cloud sync warning: " + (err?.message || "Click 'Sync Cloud Now' to retry."));
+                return true;
             }
         }
 
@@ -1948,9 +2052,11 @@
             const statFireCount = document.getElementById('statFireCount');
             if (statFireCount) statFireCount.textContent = `${fireExtinguishers.length} Units`;
 
-            const expiringCount = fireExtinguishers.filter(f => f.status === 'EXPIRED_SOON' || f.status === 'DEFECT').length;
+            const expiringExtCount = fireExtinguishers.filter(f => f.status === 'EXPIRED_SOON' || f.status === 'DEFECT').length;
+            const pumpAlertCount = firePumps.filter(p => getFirePumpIssues(p).length > 0).length;
+            const totalFireAlerts = expiringExtCount + pumpAlertCount;
             const statExpiringSoon = document.getElementById('statExpiringSoon');
-            if (statExpiringSoon) statExpiringSoon.textContent = `${expiringCount} Require Attention`;
+            if (statExpiringSoon) statExpiringSoon.textContent = `${totalFireAlerts} Require Attention`;
 
             const statUaucCount = document.getElementById('statUaucCount');
             if (statUaucCount) statUaucCount.textContent = `${uaucData.length} Reports`;
@@ -1959,14 +2065,58 @@
             const statUaucResolved = document.getElementById('statUaucResolved');
             if (statUaucResolved) statUaucResolved.textContent = `${resolvedUauc} Resolved / Closed`;
 
-            const statCompliance = document.getElementById('statCompliance');
-            if (statCompliance && zoneInspectionLogs.length > 0) {
-                const numericScores = zoneInspectionLogs
+            // Current Month vs Last Month Zone Compliance Rate
+            const now = new Date();
+            const currYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const currMonthName = now.toLocaleDateString('en-MY', { month: 'short', year: 'numeric' });
+
+            const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastYearMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+            const lastMonthName = prevDate.toLocaleDateString('en-MY', { month: 'short', year: 'numeric' });
+
+            const calcAvgScore = (logs) => {
+                const nums = logs
                     .map(l => parseFloat(String(l.score).replace('%', '')))
                     .filter(n => !isNaN(n));
-                if (numericScores.length > 0) {
-                    const avg = (numericScores.reduce((a, b) => a + b, 0) / numericScores.length).toFixed(1);
-                    statCompliance.textContent = `${avg}%`;
+                if (nums.length === 0) return null;
+                return nums.reduce((a, b) => a + b, 0) / nums.length;
+            };
+
+            const currMonthLogs = zoneInspectionLogs.filter(l => typeof l.date === 'string' && l.date.startsWith(currYearMonth));
+            const lastMonthLogs = zoneInspectionLogs.filter(l => typeof l.date === 'string' && l.date.startsWith(lastYearMonth));
+
+            const currAvg = calcAvgScore(currMonthLogs);
+            const lastAvg = calcAvgScore(lastMonthLogs);
+
+            const statCompliance = document.getElementById('statCompliance');
+            const statComplianceCurrLabel = document.getElementById('statComplianceCurrLabel');
+            const statComplianceSub = document.getElementById('statComplianceSub');
+
+            if (statComplianceCurrLabel) {
+                statComplianceCurrLabel.textContent = `(${currMonthName})`;
+            }
+
+            if (statCompliance) {
+                if (currAvg !== null) {
+                    statCompliance.textContent = `${currAvg.toFixed(1)}%`;
+                    statCompliance.className = `text-2xl font-bold ${currAvg >= 85 ? 'text-emerald-600' : (currAvg >= 70 ? 'text-amber-600' : 'text-rose-600')}`;
+                } else {
+                    statCompliance.textContent = `0.0%`;
+                    statCompliance.className = "text-2xl font-bold text-slate-400";
+                }
+            }
+
+            if (statComplianceSub) {
+                const lastAvgText = lastAvg !== null ? `${lastAvg.toFixed(1)}%` : '0.0%';
+                if (currAvg !== null && lastAvg !== null) {
+                    const diff = currAvg - lastAvg;
+                    const sign = diff >= 0 ? '+' : '';
+                    const diffColor = diff >= 0 ? 'text-emerald-600' : 'text-rose-600';
+                    statComplianceSub.innerHTML = `Last Month (${lastMonthName}): <strong class="text-slate-700">${lastAvgText}</strong> <span class="${diffColor} font-bold">(${sign}${diff.toFixed(1)}%)</span>`;
+                } else if (currAvg === null && lastAvg !== null) {
+                    statComplianceSub.innerHTML = `No logs yet for ${currMonthName} &bull; Last Month (${lastMonthName}): <strong class="text-emerald-700">${lastAvgText}</strong>`;
+                } else {
+                    statComplianceSub.innerHTML = `Last Month (${lastMonthName}): <strong class="text-slate-700">${lastAvgText}</strong>`;
                 }
             }
         }
@@ -3872,14 +4022,15 @@
             const isEdit = editIndex !== null && editIndex !== undefined;
             const existing = isEdit ? uaucData[editIndex] : null;
             const reporterInput = document.getElementById('uaucReporter')?.value?.trim();
+            const selectedCat = document.getElementById('uaucCategory')?.value || "Unsafe Condition";
 
             const record = {
                 id: isEdit ? existing.id : `UAUC-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
                 date: document.getElementById('uaucDate').value,
-                category: document.getElementById('uaucCategory').value,
+                category: selectedCat,
                 zone: document.getElementById('uaucZone').value,
-                observation: document.getElementById('uaucObs').value,
-                immediateAction: document.getElementById('uaucAction').value,
+                observation: document.getElementById('uaucObs').value.trim(),
+                immediateAction: document.getElementById('uaucAction').value.trim(),
                 reporter: reporterInput || (isEdit ? existing.reporter : currentUser.name),
                 risk: document.getElementById('uaucRisk').value,
                 status: document.getElementById('uaucStatus').value,
@@ -3891,11 +4042,19 @@
                 uaucData[editIndex] = record;
             } else {
                 uaucData.unshift(record);
+                // Reset category filter dropdown to ALL so the newly submitted UAUC report is immediately visible in the table
+                const filterEl = document.getElementById('filterUaucCategory');
+                if (filterEl && filterEl.value !== 'ALL' && filterEl.value !== selectedCat) {
+                    filterEl.value = 'ALL';
+                }
             }
+
             closeModal();
+            saveStateToLocalBackup();
+            refreshAllViews();
             const synced = await saveAllData();
             if (synced) {
-                showToast(isEdit ? "Daily Finding / UAUC updated in Cloud!" : "Report submitted & synced to KLSM Cloud!");
+                showToast(isEdit ? "Daily Finding / UAUC updated in Cloud!" : "UAUC Report saved & captured into UAUC Report List!");
             }
         }
 
@@ -3923,6 +4082,7 @@
                     <td class="p-3 text-xs">${item.zone}</td>
                     <td class="p-3 text-slate-700">${item.person}</td>
                     <td class="p-3 text-xs text-slate-500">${item.cause}</td>
+                    <td class="p-3 text-xs text-slate-700">${item.actionTaken || '-'}</td>
                     <td class="p-3 text-center">${renderPhotoBadge(item, item.id)}</td>
                     <td class="p-3 text-center"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-bold rounded">${item.dosh}</span></td>
                     <td class="p-3 text-right whitespace-nowrap space-x-1">
@@ -3943,10 +4103,11 @@
             const item = isEdit ? accidentData[editIndex] : {
                 id: `INC-2026-00${accidentData.length + 4}`,
                 datetime: `${new Date().toISOString().split('T')[0]} 10:00`,
-                type: "First Aid Case",
+                type: "Incident",
                 zone: ZONES_DATA[0].name,
                 person: "",
                 cause: "",
+                actionTaken: "",
                 dosh: "Pending Review",
                 status: "Open",
                 photos: []
@@ -3963,6 +4124,7 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Incident Type</label>
                             <select id="accType" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option ${item.type === 'Incident' ? 'selected' : ''}>Incident</option>
                                 <option ${item.type === 'First Aid Case' ? 'selected' : ''}>First Aid Case</option>
                                 <option ${item.type === 'Near Miss' ? 'selected' : ''}>Near Miss</option>
                                 <option ${item.type === 'Lost Time Injury (LTI)' ? 'selected' : ''}>Lost Time Injury (LTI)</option>
@@ -3991,6 +4153,10 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">Root Cause Analysis</label>
                         <textarea id="accCause" required class="w-full p-2 border border-slate-300 rounded-xl text-sm" rows="2">${item.cause}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Corrective and Preventive Action Taken</label>
+                        <textarea id="accActionTaken" required class="w-full p-2 border border-slate-300 rounded-xl text-sm" rows="2" placeholder="Describe the corrective and preventive action taken...">${item.actionTaken || ''}</textarea>
                     </div>
                     ${getPhotoInputHtml()}
                     <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm">
@@ -4032,6 +4198,7 @@
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Incident Type / Severity</label>
                             <select id="accType" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                                <option>Incident</option>
                                 <option>Near Miss</option>
                                 <option>First Aid Case</option>
                                 <option>Medical Treatment Case</option>
@@ -4051,8 +4218,12 @@
                         <input type="text" id="accPerson" required placeholder="e.g. Operator name & brief injury/incident details" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Immediate Cause / What Happened</label>
-                        <textarea id="accCause" required placeholder="Describe how the incident happened and immediate action taken..." class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2"></textarea>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Root Cause Analysis / Immediate Cause</label>
+                        <textarea id="accCause" required placeholder="Describe how the incident happened..." class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Corrective and Preventive Action Taken</label>
+                        <textarea id="accActionTaken" required placeholder="Describe the corrective and preventive action taken..." class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2"></textarea>
                     </div>
                     ${getPhotoInputHtml()}
                     <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm shadow-md">
@@ -4081,7 +4252,8 @@
                 type: document.getElementById('accType').value,
                 zone: document.getElementById('accZone').value,
                 person: publicReporter ? `${personVal} (Reported by: ${publicReporter})` : personVal,
-                cause: document.getElementById('accCause').value,
+                cause: document.getElementById('accCause').value.trim(),
+                actionTaken: document.getElementById('accActionTaken')?.value?.trim() || "",
                 dosh: document.getElementById('accDosh')?.value || "Pending Review",
                 status: isEdit ? existing.status : "Open",
                 photos: [...pendingPhotos]
@@ -4636,41 +4808,153 @@
         }
 
         // --- ALERT TABLE & LIVE CHARTS ---
+        function getFirePumpIssues(item) {
+            if (!item) return [];
+            const issues = [];
+            const cat = item.equipCategory || 'Hose Reel';
+            const isPump = cat.includes('Pump');
+
+            if (item.status === 'FAIL') {
+                issues.push('Status: FAIL');
+            }
+            if (!isPump) {
+                if (item.hoseCondition && item.hoseCondition !== 'Good') issues.push(`Hose: ${item.hoseCondition}`);
+                if (item.coupling && item.coupling !== 'Good') issues.push(`Coupling: ${item.coupling}`);
+                if (item.nozzle && item.nozzle !== 'Functional') issues.push(`Nozzle: ${item.nozzle}`);
+                if (item.hydrantBox && item.hydrantBox !== 'Good') issues.push(`Box: ${item.hydrantBox}`);
+                if (item.valve && item.valve !== 'Operational') issues.push(`Valve: ${item.valve}`);
+            } else {
+                if (item.batteryCond && !['Good (12.8V)', 'N/A'].includes(item.batteryCond)) issues.push(`Battery: ${item.batteryCond}`);
+                if (item.engineOil && !['Normal Level', 'N/A'].includes(item.engineOil)) issues.push(`Oil: ${item.engineOil}`);
+                if (item.dieselFuel && !['Full (>80%)', 'Half (50% - 80%)', '95% Full', 'N/A'].includes(item.dieselFuel)) issues.push(`Fuel: ${item.dieselFuel}`);
+                if (item.radiatorCoolant && !['Normal Level', 'N/A'].includes(item.radiatorCoolant)) issues.push(`Coolant: ${item.radiatorCoolant}`);
+                if (item.controlPanel && !['Auto Mode / Good', 'Auto Mode / Normal'].includes(item.controlPanel)) issues.push(`Panel: ${item.controlPanel}`);
+                if (item.inletOutletValve && item.inletOutletValve !== 'Open & Operational') issues.push(`Valves: ${item.inletOutletValve}`);
+                if (item.electricMotor && !['Good / Normal', 'Good / Normal Amp', 'N/A (Diesel Pump)'].includes(item.electricMotor)) issues.push(`Motor: ${item.electricMotor}`);
+            }
+            return issues;
+        }
+
         function renderAlertTable() {
             const tbody = document.getElementById('expiryAlertTable');
+            const badgeEl = document.getElementById('fireAlertBadgeCount');
             if (!tbody) return;
             tbody.innerHTML = '';
+
+            let alertRowsCount = 0;
+
+            // 1. Portable Fire Extinguisher Alerts
             fireExtinguishers.forEach((item, index) => {
                 if (item.status !== 'EXPIRED_SOON' && item.status !== 'DEFECT') return;
+                alertRowsCount++;
+                const isDefect = item.status === 'DEFECT';
+                const statusBadge = isDefect
+                    ? `<span class="px-2.5 py-1 bg-rose-100 text-rose-800 text-xs font-semibold rounded-full">Defect (${item.pressure})</span>`
+                    : `<span class="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">Hydrostatic Test / Expiring</span>`;
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="p-4 font-bold text-slate-800">${item.id}</td>
-                    <td class="p-4">${item.type}</td>
-                    <td class="p-4 font-mono text-xs">${item.mfgYear || '2022'}</td>
+                    <td class="p-4 font-bold text-slate-800">
+                        <i class="fa-solid fa-fire-extinguisher text-brand-600 mr-1.5"></i>${item.id}
+                    </td>
+                    <td class="p-4">
+                        <span class="px-2 py-0.5 bg-brand-50 text-brand-700 text-[11px] font-bold rounded">Extinguisher (${item.type})</span>
+                    </td>
+                    <td class="p-4 font-mono text-xs">${item.mfgYear || '2022'} &bull; ${item.capacity || ''}</td>
                     <td class="p-4 text-xs text-slate-600">${item.zone}</td>
                     <td class="p-4 text-rose-600 font-semibold text-xs">${item.expiry}</td>
-                    <td class="p-4"><span class="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">Hydrostatic Test Due</span></td>
+                    <td class="p-4">${statusBadge}</td>
                     <td class="p-4 text-right">
-                        <button onclick="openFireExtinguisherModal(${index})" class="px-3 py-1 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700">Inspect / Edit</button>
+                        <button onclick="openFireExtinguisherModal(${index})" class="px-3 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700">Inspect / Edit</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+
+            // 2. Hose Reel, Fire Hydrant & Fire Pump Alerts
+            firePumps.forEach((item, index) => {
+                const issues = getFirePumpIssues(item);
+                if (issues.length === 0) return;
+                alertRowsCount++;
+
+                const cat = item.equipCategory || 'Hose Reel';
+                const isPump = cat.includes('Pump');
+                const iconClass = isPump ? 'fa-pump-soap text-emerald-600' : 'fa-faucet-drip text-indigo-600';
+                const catBadgeClass = isPump ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-100 text-indigo-800';
+                const statusBadgeClass = item.status === 'FAIL'
+                    ? 'bg-rose-100 text-rose-800'
+                    : 'bg-amber-100 text-amber-800';
+                const statusLabel = item.status === 'FAIL' ? 'FAIL (Action Needed)' : 'Action Needed';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-4 font-bold text-slate-800">
+                        <i class="fa-solid ${iconClass} mr-1.5"></i>${item.name}
+                    </td>
+                    <td class="p-4">
+                        <span class="px-2 py-0.5 ${catBadgeClass} text-[11px] font-bold rounded">${cat}</span>
+                    </td>
+                    <td class="p-4 text-xs text-slate-600">${issues.join(' • ')}</td>
+                    <td class="p-4 text-xs text-slate-600">${item.location || 'Mill Fire Ring'}</td>
+                    <td class="p-4 text-xs text-slate-500">Last Test: ${item.lastTest || '-'}</td>
+                    <td class="p-4"><span class="px-2.5 py-1 ${statusBadgeClass} text-xs font-semibold rounded-full">${statusLabel}</span></td>
+                    <td class="p-4 text-right">
+                        <button onclick="openFirePumpModal(${index})" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700">Inspect / Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (badgeEl) {
+                badgeEl.textContent = alertRowsCount > 0 ? `${alertRowsCount} Action Needed` : 'All Equipment OK';
+                badgeEl.className = alertRowsCount > 0
+                    ? "px-3 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full self-start sm:self-center"
+                    : "px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full self-start sm:self-center";
+            }
+
+            if (alertRowsCount === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="p-6 text-center text-xs text-emerald-700 bg-emerald-50/50">
+                            <i class="fa-solid fa-circle-check text-emerald-500 mr-1.5"></i> All Portable Extinguishers, Hose Reels, Fire Hydrants, and Fire Pumps are in good operational condition.
+                        </td>
+                    </tr>
+                `;
+            }
         }
 
         function computeLiveChartData() {
+            const now = new Date();
+            const currYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const currMonthLabel = now.toLocaleDateString('en-MY', { month: 'short', year: 'numeric' });
+
+            const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastYearMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+            const lastMonthLabel = prevDate.toLocaleDateString('en-MY', { month: 'short', year: 'numeric' });
+
+            const chartLabelEl = document.getElementById('chartZoneMonthComparisonLabel');
+            if (chartLabelEl) {
+                chartLabelEl.textContent = `${currMonthLabel} vs ${lastMonthLabel}`;
+            }
+
             const zoneLabels = ZONES_DATA.map((_, i) => `Zone ${i + 1}`);
-            const zoneScores = ZONES_DATA.map((zone) => {
-                const matchingLogs = zoneInspectionLogs.filter(
-                    l => l.zoneId === zone.id || (l.zone && l.zone.startsWith(zone.name.split('–')[0].trim()))
-                );
+
+            const calcZoneMonthScore = (zone, ymPrefix) => {
+                const matchingLogs = zoneInspectionLogs.filter(l => {
+                    const sameZone = l.zoneId === zone.id || (l.zone && l.zone.startsWith(zone.name.split('–')[0].trim()));
+                    const sameMonth = typeof l.date === 'string' && l.date.startsWith(ymPrefix);
+                    return sameZone && sameMonth;
+                });
                 if (matchingLogs.length === 0) return 0;
                 const nums = matchingLogs
                     .map(l => parseFloat(String(l.score).replace('%', '')))
                     .filter(n => !isNaN(n));
                 if (nums.length === 0) return 0;
                 return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
-            });
+            };
+
+            const currentMonthZoneScores = ZONES_DATA.map(z => calcZoneMonthScore(z, currYearMonth));
+            const lastMonthZoneScores = ZONES_DATA.map(z => calcZoneMonthScore(z, lastYearMonth));
 
             const unsafeActCount = uaucData.filter(u => u.category === 'Unsafe Act').length;
             const unsafeCondCount = uaucData.filter(u => u.category === 'Unsafe Condition').length;
@@ -4679,7 +4963,10 @@
 
             return {
                 zoneLabels,
-                zoneScores,
+                currMonthLabel,
+                lastMonthLabel,
+                currentMonthZoneScores,
+                lastMonthZoneScores,
                 uaucCounts: [unsafeActCount, unsafeCondCount, nonConfCount, nearMissCount]
             };
         }
@@ -4689,19 +4976,27 @@
             const canvasUauc = document.getElementById('chartUaucDistribution');
             if (!canvasZone || !canvasUauc) return;
 
-            const { zoneLabels, zoneScores, uaucCounts } = computeLiveChartData();
+            const { zoneLabels, currMonthLabel, lastMonthLabel, currentMonthZoneScores, lastMonthZoneScores, uaucCounts } = computeLiveChartData();
 
             if (chartZoneInstance) chartZoneInstance.destroy();
             chartZoneInstance = new Chart(canvasZone.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: zoneLabels,
-                    datasets: [{
-                        label: 'Average Compliance Score (%)',
-                        data: zoneScores,
-                        backgroundColor: zoneScores.map(s => s === 0 ? '#cbd5e1' : (s >= 90 ? '#0284c7' : (s >= 75 ? '#f59e0b' : '#e11d48'))),
-                        borderRadius: 8
-                    }]
+                    datasets: [
+                        {
+                            label: `Current Month (${currMonthLabel})`,
+                            data: currentMonthZoneScores,
+                            backgroundColor: '#0284c7',
+                            borderRadius: 6
+                        },
+                        {
+                            label: `Last Month (${lastMonthLabel})`,
+                            data: lastMonthZoneScores,
+                            backgroundColor: '#94a3b8',
+                            borderRadius: 6
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
@@ -4716,7 +5011,7 @@
                     plugins: {
                         tooltip: {
                             callbacks: {
-                                label: (ctx) => ctx.raw === 0 ? 'No Inspection Submitted (0%)' : `Compliance: ${ctx.raw}%`
+                                label: (ctx) => `${ctx.dataset.label}: ${ctx.raw}%`
                             }
                         }
                     }
@@ -4742,12 +5037,12 @@
 
         function updateCharts() {
             if (!chartZoneInstance || !chartUaucInstance) return;
-            const { zoneScores, uaucCounts } = computeLiveChartData();
+            const { currMonthLabel, lastMonthLabel, currentMonthZoneScores, lastMonthZoneScores, uaucCounts } = computeLiveChartData();
 
-            chartZoneInstance.data.datasets[0].data = zoneScores;
-            chartZoneInstance.data.datasets[0].backgroundColor = zoneScores.map(
-                s => s === 0 ? '#cbd5e1' : (s >= 90 ? '#0284c7' : (s >= 75 ? '#f59e0b' : '#e11d48'))
-            );
+            chartZoneInstance.data.datasets[0].label = `Current Month (${currMonthLabel})`;
+            chartZoneInstance.data.datasets[0].data = currentMonthZoneScores;
+            chartZoneInstance.data.datasets[1].label = `Last Month (${lastMonthLabel})`;
+            chartZoneInstance.data.datasets[1].data = lastMonthZoneScores;
             chartZoneInstance.update();
 
             chartUaucInstance.data.datasets[0].data = uaucCounts;
@@ -4929,6 +5224,7 @@
 
             const dateEl = document.getElementById('currentInspectionDate');
             if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' });
+            loadStateFromLocalBackup();
             refreshAllViews();
             initCharts();
             initCloudSync();
