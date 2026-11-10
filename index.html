@@ -118,7 +118,7 @@
                     </div>
 
                     <div class="mt-5 pt-4 border-t border-slate-200 flex flex-col items-center gap-2.5 text-center text-xs text-slate-400">
-                        <span>2026 KLSM HSSE  • Version 3.1 (Mobile Ready)</span>
+                        <span>2026 KLSM HSSE  • Version 3.0 (Mobile Ready)</span>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
                             <button type="button" onclick="openFirebaseSetupModal()" class="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold rounded-xl transition flex items-center justify-center gap-1.5 text-xs">
                                 <i class="fa-solid fa-cloud-bolt text-amber-600"></i> Link Firebase Cloud
@@ -1064,10 +1064,18 @@
             { id: "STORE OFFICE", type: "Foam", capacity: "9.0 kg", mfgYear: "2025", zone: "Zone 8 – Security", pressure: "Good", expiry: "2027-06-10", status: "OK" }
         ];
 
+        const LEGACY_DUMMY_PUMP_NAMES = new Set([
+            "Yard Hydrant Pillar #04",
+            "Main Hydrant & Pump #01"
+        ]);
+
+        function filterOutLegacyDummyPumps(list) {
+            if (!Array.isArray(list)) return [];
+            return list.filter(item => item && !LEGACY_DUMMY_PUMP_NAMES.has((item.name || "").trim()));
+        }
+
         let firePumps = [
-            { id: "HRP-01", equipCategory: "Hose Reel", name: "Hose Reel #01", location: "Zone 5 – Production Area", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Good", valve: "Operational", lastTest: "2026-10-10", status: "PASS" },
-            { id: "HRP-02", equipCategory: "Hose Reel", name: "Yard Hydrant Pillar #04", location: "Zone 6 – Store & Diesel Skid Tank", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Minor Rust", valve: "Operational", lastTest: "2026-10-12", status: "PASS" },
-            { id: "HRP-03", equipCategory: "Hose Reel", name: "Main Hydrant & Pump #01", location: "Zone 3 – Boiler, Engine Room & RO Water Treatment", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Good", valve: "Operational", lastTest: "2026-10-20", status: "PASS" }
+            { id: "HRP-01", equipCategory: "Hose Reel", name: "Hose Reel #01", location: "Zone 5 – Production Area", hoseCondition: "Good", coupling: "Good", nozzle: "Functional", hydrantBox: "Good", valve: "Operational", lastTest: "2026-10-10", status: "PASS" }
         ];
 
         let carParData = [
@@ -1262,12 +1270,36 @@
             return result;
         }
 
+        function getRecycleBinDeletedKeysSet() {
+            const set = new Set();
+            if (!Array.isArray(recycleBinData)) return set;
+            recycleBinData.forEach(entry => {
+                const p = entry?.payload;
+                if (!p) return;
+                if (entry.category === "Hydrant/Pump") {
+                    set.add(p.id || `${p.name}_${p.equipCategory}`);
+                    if (p.name) set.add(p.name);
+                } else if (entry.category === "Extinguisher") {
+                    set.add(p.id || `${p.zone}_${p.type}`);
+                } else if (entry.category === "CAR/PAR") {
+                    set.add(p.ref || `${p.dateIssued}_${p.detail}`);
+                } else if (entry.category === "UAUC") {
+                    set.add(p.id || `${p.date}_${p.zone}_${p.observation}`);
+                } else if (entry.category === "Accident") {
+                    set.add(p.id || `${p.datetime}_${p.person}`);
+                } else if (entry.category === "Zone Log") {
+                    set.add(p.id || `${p.date}_${p.zone}_${p.inspector}_${p.score}`);
+                }
+            });
+            return set;
+        }
+
         function saveStateToLocalBackup() {
             try {
                 localStorage.setItem(LOCAL_STORAGE_STATE_KEY, JSON.stringify({
                     zones: ZONES_DATA,
                     fireExtinguishers,
-                    firePumps,
+                    firePumps: filterOutLegacyDummyPumps(firePumps),
                     carParData,
                     uaucData,
                     accidentData,
@@ -1286,35 +1318,39 @@
                 const raw = localStorage.getItem(LOCAL_STORAGE_STATE_KEY);
                 if (!raw) return;
                 const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed.recycleBinData)) {
+                    recycleBinData = parsed.recycleBinData;
+                }
+                const deletedKeys = getRecycleBinDeletedKeysSet();
+
                 if (Array.isArray(parsed.zones)) {
                     parsed.zones.forEach((z, i) => { if (ZONES_DATA[i] && z.parameters) ZONES_DATA[i].parameters = z.parameters; });
                 }
                 if (Array.isArray(parsed.fireExtinguishers)) {
-                    fireExtinguishers = mergeArraysByKey(parsed.fireExtinguishers, fireExtinguishers, f => f.id || `${f.zone}_${f.type}`);
+                    fireExtinguishers = mergeArraysByKey(parsed.fireExtinguishers, [], f => f.id || `${f.zone}_${f.type}`, deletedKeys);
                 }
                 if (Array.isArray(parsed.firePumps)) {
-                    firePumps = mergeArraysByKey(parsed.firePumps, firePumps, p => p.id || `${p.name}_${p.equipCategory}`);
+                    firePumps = filterOutLegacyDummyPumps(
+                        mergeArraysByKey(parsed.firePumps, [], p => p.id || `${p.name}_${p.equipCategory}`, deletedKeys)
+                    );
                 }
                 if (Array.isArray(parsed.carParData)) {
-                    carParData = mergeArraysByKey(parsed.carParData, carParData, c => c.ref || `${c.dateIssued}_${c.detail}`);
+                    carParData = mergeArraysByKey(parsed.carParData, carParData, c => c.ref || `${c.dateIssued}_${c.detail}`, deletedKeys);
                 }
                 if (Array.isArray(parsed.uaucData)) {
-                    uaucData = mergeArraysByKey(parsed.uaucData, uaucData, u => u.id || `${u.date}_${u.zone}_${u.observation}`);
+                    uaucData = mergeArraysByKey(parsed.uaucData, uaucData, u => u.id || `${u.date}_${u.zone}_${u.observation}`, deletedKeys);
                 }
                 if (Array.isArray(parsed.accidentData)) {
-                    accidentData = mergeArraysByKey(parsed.accidentData, accidentData, a => a.id || `${a.datetime}_${a.person}`);
+                    accidentData = mergeArraysByKey(parsed.accidentData, accidentData, a => a.id || `${a.datetime}_${a.person}`, deletedKeys);
                 }
                 if (Array.isArray(parsed.zoneInspectionLogs)) {
-                    zoneInspectionLogs = mergeArraysByKey(parsed.zoneInspectionLogs, zoneInspectionLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`);
+                    zoneInspectionLogs = mergeArraysByKey(parsed.zoneInspectionLogs, zoneInspectionLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys);
                 }
                 if (Array.isArray(parsed.personnelData) && parsed.personnelData.length > 0) {
                     personnelData = parsed.personnelData;
                 }
                 if (parsed.securityConfig) {
                     securityConfig = parsed.securityConfig;
-                }
-                if (Array.isArray(parsed.recycleBinData)) {
-                    recycleBinData = parsed.recycleBinData;
                 }
             } catch (e) {
                 console.warn("Could not load local state backup:", e);
@@ -1511,6 +1547,11 @@
 
         function applyCloudSnapshotData(data) {
             if (!data) return;
+            if (data.recycleBinData) {
+                try { recycleBinData = sanitizeRecycleBinForCloud(JSON.parse(data.recycleBinData)); } catch (e) {}
+            }
+            const deletedKeys = getRecycleBinDeletedKeysSet();
+
             if (data.zones) {
                 try {
                     const parsedZones = JSON.parse(data.zones);
@@ -1520,37 +1561,39 @@
             if (data.fireExtinguishers) {
                 try {
                     const cloudExt = JSON.parse(data.fireExtinguishers);
-                    fireExtinguishers = mergeArraysByKey(fireExtinguishers, cloudExt, f => f.id || `${f.zone}_${f.type}`);
+                    fireExtinguishers = mergeArraysByKey(cloudExt, [], f => f.id || `${f.zone}_${f.type}`, deletedKeys);
                 } catch (e) {}
             }
             if (data.firePumps) {
                 try {
-                    const cloudPumps = JSON.parse(data.firePumps);
-                    firePumps = mergeArraysByKey(firePumps, cloudPumps, p => p.id || `${p.name}_${p.equipCategory}`);
+                    const cloudPumps = filterOutLegacyDummyPumps(JSON.parse(data.firePumps));
+                    firePumps = filterOutLegacyDummyPumps(
+                        mergeArraysByKey(cloudPumps, [], p => p.id || `${p.name}_${p.equipCategory}`, deletedKeys)
+                    );
                 } catch (e) {}
             }
             if (data.carParData) {
                 try {
                     const cloudCars = JSON.parse(data.carParData);
-                    carParData = mergeArraysByKey(carParData, cloudCars, c => c.ref || `${c.dateIssued}_${c.detail}`);
+                    carParData = mergeArraysByKey(carParData, cloudCars, c => c.ref || `${c.dateIssued}_${c.detail}`, deletedKeys);
                 } catch (e) {}
             }
             if (data.uaucData) {
                 try {
                     const cloudUauc = JSON.parse(data.uaucData);
-                    uaucData = mergeArraysByKey(uaucData, cloudUauc, u => u.id || `${u.date}_${u.zone}_${u.observation}`);
+                    uaucData = mergeArraysByKey(uaucData, cloudUauc, u => u.id || `${u.date}_${u.zone}_${u.observation}`, deletedKeys);
                 } catch (e) {}
             }
             if (data.accidentData) {
                 try {
                     const cloudAcc = JSON.parse(data.accidentData);
-                    accidentData = mergeArraysByKey(accidentData, cloudAcc, a => a.id || `${a.datetime}_${a.person}`);
+                    accidentData = mergeArraysByKey(accidentData, cloudAcc, a => a.id || `${a.datetime}_${a.person}`, deletedKeys);
                 } catch (e) {}
             }
             if (data.zoneInspectionLogs) {
                 try {
                     const cloudLogs = JSON.parse(data.zoneInspectionLogs);
-                    zoneInspectionLogs = mergeArraysByKey(zoneInspectionLogs, cloudLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`);
+                    zoneInspectionLogs = mergeArraysByKey(zoneInspectionLogs, cloudLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys);
                 } catch (e) {}
             }
             if (data.personnelData) {
@@ -1559,13 +1602,11 @@
             if (data.securityConfig) {
                 try { securityConfig = JSON.parse(data.securityConfig); } catch (e) {}
             }
-            if (data.recycleBinData) {
-                try { recycleBinData = sanitizeRecycleBinForCloud(JSON.parse(data.recycleBinData)); } catch (e) {}
-            }
         }
 
         // --- ROBUST CLOUD SAVE (MERGES MULTI-USER SUBMISSIONS + HANDLES 1MB FIRESTORE LIMIT) ---
         async function saveAllData(deletedKey = null) {
+            firePumps = filterOutLegacyDummyPumps(firePumps);
             recycleBinData = sanitizeRecycleBinForCloud(recycleBinData);
             saveStateToLocalBackup();
             refreshAllViews();
@@ -1601,7 +1642,8 @@
                 const overflowDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master_logs_overflow');
 
                 // 1. Fetch latest cloud snapshot first so User B never overwrites User A's concurrent submissions
-                const deletedKeysSet = deletedKey ? new Set([deletedKey]) : new Set();
+                const deletedKeysSet = getRecycleBinDeletedKeysSet();
+                if (deletedKey) deletedKeysSet.add(deletedKey);
                 try {
                     const latestSnap = await getDoc(stateDocRef);
                     if (latestSnap.exists()) {
@@ -1652,12 +1694,14 @@
                             );
                         }
                         if (cloudData.firePumps) {
-                            const cloudPumps = JSON.parse(cloudData.firePumps);
-                            firePumps = mergeArraysByKey(
-                                firePumps,
-                                cloudPumps,
-                                p => p.id || `${p.name}_${p.equipCategory}`,
-                                deletedKeysSet
+                            const cloudPumps = filterOutLegacyDummyPumps(JSON.parse(cloudData.firePumps));
+                            firePumps = filterOutLegacyDummyPumps(
+                                mergeArraysByKey(
+                                    firePumps,
+                                    cloudPumps,
+                                    p => p.id || `${p.name}_${p.equipCategory}`,
+                                    deletedKeysSet
+                                )
                             );
                         }
                     }
@@ -3508,8 +3552,9 @@
 
         function saveFirePump(e, editIndex) {
             e.preventDefault();
+            const isEdit = editIndex !== null && editIndex !== undefined && firePumps[editIndex];
             const record = {
-                id: `HRP-${Date.now()}`,
+                id: isEdit ? firePumps[editIndex].id : `HRP-${Date.now()}`,
                 equipCategory: document.getElementById('pumpEquipCategory').value,
                 name: document.getElementById('pumpName').value,
                 hoseCondition: document.getElementById('pumpHoseCondition')?.value || "Good",
@@ -3543,19 +3588,21 @@
         function deleteFireExtinguisher(index) {
             const item = fireExtinguishers[index];
             if (!item) return;
+            const delKey = item.id || `${item.zone}_${item.type}`;
             requestSecureDelete("Extinguisher", `${item.id} (${item.zone})`, item, () => {
                 fireExtinguishers.splice(index, 1);
                 showToast("Fire extinguisher moved to Recovery Vault.");
-            });
+            }, delKey);
         }
 
         function deleteFirePump(index) {
             const item = firePumps[index];
             if (!item) return;
+            const delKey = item.id || `${item.name}_${item.equipCategory}`;
             requestSecureDelete("Hydrant/Pump", `${item.name} (${item.equipCategory || 'Hydrant/Pump'})`, item, () => {
                 firePumps.splice(index, 1);
                 showToast("Hose Reel / Hydrant / Pump moved to Recovery Vault.");
-            });
+            }, delKey);
         }
 
         // --- CAR / PAR REGISTER ---
