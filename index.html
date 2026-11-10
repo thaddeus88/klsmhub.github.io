@@ -1169,17 +1169,63 @@
 
         let accidentData = [];
 
+        const LEGACY_SYNTHETIC_ZLOG_IDS = new Set([
+            "ZLOG-02", "ZLOG-03", "ZLOG-04", "ZLOG-05", "ZLOG-06", "ZLOG-07", "ZLOG-08", "ZLOG-09"
+        ]);
+
         let zoneInspectionLogs = [
-            { id: "ZLOG-09", date: "2026-10-26", zoneId: "zone-3", zone: "Zone 3 – Boiler, Engine Room & RO Water Treatment", inspector: "Maniam K.", score: "91%", remarks: "Routine inspection completed", photos: [], details: [] },
-            { id: "ZLOG-08", date: "2026-10-26", zoneId: "zone-1", zone: "Zone 1 – Laboratory, CPO Despatch, Oil Storage Tank & FFB Grading", inspector: "Maniam K.", score: "100%", remarks: "Routine inspection completed", photos: [], details: [] },
-            { id: "ZLOG-07", date: "2026-10-26", zoneId: "zone-1", zone: "Zone 1 – Laboratory, CPO Despatch, Oil Storage Tank & FFB Grading", inspector: "Thaddeus Yap", score: "95%", remarks: "Routine inspection completed", photos: [], details: [] },
-            { id: "ZLOG-06", date: "2026-10-26", zoneId: "zone-3", zone: "Zone 3 – Boiler, Engine Room & RO Water Treatment", inspector: "Thaddeus Yap", score: "67%", remarks: "housekeeping not maintain", photos: [], details: [] },
-            { id: "ZLOG-05", date: "2026-10-26", zoneId: "zone-8", zone: "Zone 8 – Security", inspector: "Thaddeus Yap", score: "67%", remarks: "testing", photos: [], details: [] },
-            { id: "ZLOG-04", date: "2026-10-26", zoneId: "zone-7", zone: "Zone 7 – Mill’s Clinic", inspector: "Thaddeus Yap", score: "67%", remarks: "Routine inspection completed", photos: [], details: [] },
-            { id: "ZLOG-03", date: "2026-10-26", zoneId: "zone-2", zone: "Zone 2 – Workshop", inspector: "Thaddeus Yap", score: "33%", remarks: "Routine inspection completed", photos: [], details: [] },
-            { id: "ZLOG-02", date: "2026-10-26", zoneId: "zone-9", zone: "Zone 9 – Office", inspector: "Thaddeus Yap", score: "100%", remarks: "Routine inspection completed", photos: [], details: [] },
             { id: "ZLOG-01", date: "2026-10-25", zoneId: "zone-1", zone: "Zone 1 – Laboratory, CPO Despatch, Oil Storage Tank & FFB Grading", inspector: "John Doe", score: "100%", remarks: "All parameters satisfactory.", photos: [], details: [] }
         ];
+
+        function filterAndDedupeZoneLogs(list, deletedSet = new Set()) {
+            if (!Array.isArray(list)) return [];
+            const seenIds = new Set();
+            const seenSignatures = new Map();
+            const cleaned = [];
+
+            list.forEach(item => {
+                if (!item) return;
+                const idKey = String(item.id || '').trim();
+                const compositeKey = `${item.date}_${item.zone}_${item.inspector}_${item.score}`;
+                if (deletedSet.has(idKey) || deletedSet.has(compositeKey)) return;
+
+                // Skip synthetic placeholder logs if they have no details and no updatedAt
+                if (LEGACY_SYNTHETIC_ZLOG_IDS.has(idKey) && (!Array.isArray(item.details) || item.details.length === 0) && !item.updatedAt) {
+                    const sigCheck = `${String(item.date || '').trim()}|${String(item.zone || '').trim()}|${String(item.inspector || '').trim().toLowerCase()}|${String(item.score || '').trim()}`;
+                    if (seenSignatures.has(sigCheck)) return;
+                }
+
+                const sig = `${String(item.date || '').trim()}|${String(item.zone || '').trim()}|${String(item.inspector || '').trim().toLowerCase()}|${String(item.score || '').trim()}|${String(item.remarks || '').trim().toLowerCase()}`;
+
+                if (idKey && seenIds.has(idKey)) {
+                    const existingIdx = cleaned.findIndex(c => String(c.id || '').trim() === idKey);
+                    if (existingIdx !== -1) {
+                        cleaned[existingIdx] = pickMergedRecord(cleaned[existingIdx], item, true);
+                    }
+                    return;
+                }
+
+                if (seenSignatures.has(sig)) {
+                    const existingIdx = seenSignatures.get(sig);
+                    const prev = cleaned[existingIdx];
+                    // If one has a synthetic ID and the other has a real ID or details, merge & keep the real ID
+                    const merged = pickMergedRecord(prev, item, true);
+                    if (LEGACY_SYNTHETIC_ZLOG_IDS.has(String(prev.id || '')) && item.id && !LEGACY_SYNTHETIC_ZLOG_IDS.has(String(item.id))) {
+                        merged.id = item.id;
+                    } else if (LEGACY_SYNTHETIC_ZLOG_IDS.has(String(item.id || '')) && prev.id && !LEGACY_SYNTHETIC_ZLOG_IDS.has(String(prev.id))) {
+                        merged.id = prev.id;
+                    }
+                    cleaned[existingIdx] = merged;
+                    return;
+                }
+
+                if (idKey) seenIds.add(idKey);
+                seenSignatures.set(sig, cleaned.length);
+                cleaned.push(item);
+            });
+
+            return cleaned;
+        }
 
         let personnelData = [
             {
@@ -1247,6 +1293,13 @@
         let cloudInitPromise = null;
         let hasInitialCloudSnapshot = false;
         let isSavingToCloud = false;
+        let pendingRemoteSnapshotDocs = null;
+        let saveQueuePromise = Promise.resolve(true);
+        let realtimeDebounceTimer = null;
+        let lastKnownCloudUpdatedAt = "";
+        let zonesUpdatedAt = 0;
+        let personnelUpdatedAt = 0;
+        let securityUpdatedAt = 0;
         let pendingPhotoProcessingCount = 0;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'klsm-inspection-hub';
         const LOCAL_STORAGE_STATE_KEY = 'klsm_shared_state_backup_v3';
@@ -1304,6 +1357,14 @@
                 : ((localItem.photos && localItem.photos.length > 0) ? localItem.photos : []);
             if ((!winner.photos || winner.photos.length === 0) && fallbackPhotos.length > 0 && !winner.photosCleared) {
                 winner.photos = fallbackPhotos;
+            }
+
+            // Preserve inspection parameter details if one version has them
+            const fallbackDetails = (cloudItem.details && cloudItem.details.length > 0)
+                ? cloudItem.details
+                : ((localItem.details && localItem.details.length > 0) ? localItem.details : []);
+            if ((!winner.details || winner.details.length === 0) && fallbackDetails.length > 0) {
+                winner.details = fallbackDetails;
             }
             return winner;
         }
@@ -1443,14 +1504,17 @@
             try {
                 localStorage.setItem(LOCAL_STORAGE_STATE_KEY, JSON.stringify({
                     zones: ZONES_DATA,
+                    zonesUpdatedAt,
                     fireExtinguishers,
                     firePumps: filterOutLegacyDummyPumps(firePumps),
                     carParData,
                     uaucData,
                     accidentData,
-                    zoneInspectionLogs,
+                    zoneInspectionLogs: filterAndDedupeZoneLogs(zoneInspectionLogs, getRecycleBinDeletedKeysSet()),
                     personnelData,
+                    personnelUpdatedAt,
                     securityConfig,
+                    securityUpdatedAt,
                     deletedRecordKeys: Array.from(new Set(deletedRecordKeys)).slice(0, 500),
                     recycleBinData: sanitizeRecycleBinForCloud(recycleBinData)
                 }));
@@ -1470,6 +1534,10 @@
                 if (Array.isArray(parsed.recycleBinData)) {
                     recycleBinData = parsed.recycleBinData;
                 }
+                if (parsed.zonesUpdatedAt) zonesUpdatedAt = Number(parsed.zonesUpdatedAt) || 0;
+                if (parsed.personnelUpdatedAt) personnelUpdatedAt = Number(parsed.personnelUpdatedAt) || 0;
+                if (parsed.securityUpdatedAt) securityUpdatedAt = Number(parsed.securityUpdatedAt) || 0;
+
                 const deletedKeys = getRecycleBinDeletedKeysSet();
 
                 if (Array.isArray(parsed.zones)) {
@@ -1496,7 +1564,10 @@
                     accidentData = mergeArraysByKey(parsed.accidentData, accidentData, a => a.id || `${a.datetime}_${a.person}`, deletedKeys);
                 }
                 if (Array.isArray(parsed.zoneInspectionLogs)) {
-                    zoneInspectionLogs = mergeArraysByKey(parsed.zoneInspectionLogs, zoneInspectionLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys);
+                    zoneInspectionLogs = filterAndDedupeZoneLogs(
+                        mergeArraysByKey(parsed.zoneInspectionLogs, zoneInspectionLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys),
+                        deletedKeys
+                    );
                 }
                 if (Array.isArray(parsed.personnelData) && parsed.personnelData.length > 0) {
                     personnelData = parsed.personnelData;
@@ -1603,20 +1674,24 @@
                         }
                     });
 
-                    // Attach real-time listener to master document and overflow logs documents
-                    const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master');
-                    const overflowDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master_logs_overflow');
+                    // Attach real-time listener to the entire klsm_shared_state collection so master + all overflow chunks sync atomically in real time
+                    const sharedStateColRef = collection(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state');
 
                     // Flush any locally queued submissions that were saved while offline
                     const pendingLocalQueue = localStorage.getItem('klsm_unsynced_submissions');
                     if (pendingLocalQueue) {
                         try {
                             const parsedQueue = JSON.parse(pendingLocalQueue);
+                            const delSet = getRecycleBinDeletedKeysSet();
                             if (Array.isArray(parsedQueue.zoneInspectionLogs) && parsedQueue.zoneInspectionLogs.length > 0) {
-                                zoneInspectionLogs = mergeArraysByKey(
-                                    parsedQueue.zoneInspectionLogs,
-                                    zoneInspectionLogs,
-                                    l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`
+                                zoneInspectionLogs = filterAndDedupeZoneLogs(
+                                    mergeArraysByKey(
+                                        parsedQueue.zoneInspectionLogs,
+                                        zoneInspectionLogs,
+                                        l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`,
+                                        delSet
+                                    ),
+                                    delSet
                                 );
                             }
                             if (Array.isArray(parsedQueue.uaucData) && parsedQueue.uaucData.length > 0) {
@@ -1624,9 +1699,10 @@
                                     mergeArraysByKey(
                                         parsedQueue.uaucData,
                                         uaucData,
-                                        u => u.id || `${u.date}_${u.zone}_${u.observation}`
+                                        u => u.id || `${u.date}_${u.zone}_${u.observation}`,
+                                        delSet
                                     ),
-                                    getRecycleBinDeletedKeysSet()
+                                    delSet
                                 );
                             }
                         } catch (qErr) {
@@ -1634,71 +1710,106 @@
                         }
                     }
 
-                    onSnapshot(stateDocRef, async (snapshot) => {
-                        if (isSavingToCloud) return;
-                        if (snapshot.exists()) {
-                            const data = snapshot.data();
-                            const hasPendingUnsynced = Boolean(localStorage.getItem('klsm_unsynced_submissions'));
+                    const processCollectionDocsMap = async (docsMap) => {
+                        const masterData = docsMap.get('master');
+                        if (!masterData) {
+                            if (!hasInitialCloudSnapshot) {
+                                hasInitialCloudSnapshot = true;
+                                await saveAllData();
+                            }
+                            return;
+                        }
 
-                            // Load any overflow chunks first so we have the complete cloud dataset
-                            let extraCloudLogs = [];
-                            let extraCloudUauc = [];
-                            let extraCloudCars = [];
-                            let extraCloudAcc = [];
+                        const hasPendingUnsynced = Boolean(localStorage.getItem('klsm_unsynced_submissions'));
+                        let extraCloudLogs = [];
+                        let extraCloudUauc = [];
+                        let extraCloudCars = [];
+                        let extraCloudAcc = [];
 
-                            const chunkCount = Number(data.overflowChunkCount || 0);
-                            if (chunkCount > 0) {
-                                for (let cIdx = 0; cIdx < chunkCount; cIdx++) {
+                        const chunkCount = Number(masterData.overflowChunkCount || 0);
+                        if (chunkCount > 0) {
+                            for (let cIdx = 0; cIdx < chunkCount; cIdx++) {
+                                let cData = docsMap.get(`master_overflow_${cIdx}`);
+                                if (!cData) {
                                     try {
                                         const chunkRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', `master_overflow_${cIdx}`);
                                         const chunkSnap = await getDoc(chunkRef);
-                                        if (chunkSnap.exists()) {
-                                            const cData = chunkSnap.data();
-                                            if (cData.zoneInspectionLogs) extraCloudLogs.push(...JSON.parse(cData.zoneInspectionLogs));
-                                            if (cData.uaucData) extraCloudUauc.push(...JSON.parse(cData.uaucData));
-                                            if (cData.carParData) extraCloudCars.push(...JSON.parse(cData.carParData));
-                                            if (cData.accidentData) extraCloudAcc.push(...JSON.parse(cData.accidentData));
-                                        }
-                                    } catch (chunkErr) {
-                                        console.warn(`Could not read overflow chunk ${cIdx}:`, chunkErr);
-                                    }
+                                        if (chunkSnap.exists()) cData = chunkSnap.data();
+                                    } catch (e) {}
                                 }
-                            } else if (data.hasOverflowLogs) {
-                                // Legacy single overflow doc support
-                                try {
-                                    const overflowSnap = await getDoc(overflowDocRef);
-                                    if (overflowSnap.exists()) {
-                                        const ovData = overflowSnap.data();
-                                        if (ovData.overflowZoneLogs) extraCloudLogs.push(...JSON.parse(ovData.overflowZoneLogs));
-                                        if (ovData.overflowUauc) extraCloudUauc.push(...JSON.parse(ovData.overflowUauc));
-                                    }
-                                } catch (ovErr) {
-                                    console.warn("Could not read legacy overflow logs:", ovErr);
+                                if (cData) {
+                                    try { if (cData.zoneInspectionLogs) extraCloudLogs.push(...JSON.parse(cData.zoneInspectionLogs)); } catch (e) {}
+                                    try { if (cData.uaucData) extraCloudUauc.push(...JSON.parse(cData.uaucData)); } catch (e) {}
+                                    try { if (cData.carParData) extraCloudCars.push(...JSON.parse(cData.carParData)); } catch (e) {}
+                                    try { if (cData.accidentData) extraCloudAcc.push(...JSON.parse(cData.accidentData)); } catch (e) {}
                                 }
                             }
-
-                            applyCloudSnapshotData(data, {
-                                extraCloudLogs,
-                                extraCloudUauc,
-                                extraCloudCars,
-                                extraCloudAcc,
-                                authoritativeCloud: !hasPendingUnsynced
-                            });
-
-                            saveStateToLocalBackup();
-
-                            // If this device had unsynced offline submissions, push them up now
-                            if (hasPendingUnsynced) {
-                                hasInitialCloudSnapshot = true;
-                                await saveAllData();
-                            } else {
-                                hasInitialCloudSnapshot = true;
-                                refreshAllViews();
+                        } else if (masterData.hasOverflowLogs) {
+                            const ovData = docsMap.get('master_logs_overflow');
+                            if (ovData) {
+                                try { if (ovData.overflowZoneLogs) extraCloudLogs.push(...JSON.parse(ovData.overflowZoneLogs)); } catch (e) {}
+                                try { if (ovData.overflowUauc) extraCloudUauc.push(...JSON.parse(ovData.overflowUauc)); } catch (e) {}
                             }
-                        } else {
-                            hasInitialCloudSnapshot = true;
-                            await saveAllData();
                         }
+
+                        const prevCountSummary = `${zoneInspectionLogs.length}|${uaucData.length}|${carParData.length}|${accidentData.length}|${fireExtinguishers.length}|${firePumps.length}`;
+
+                        applyCloudSnapshotData(masterData, {
+                            extraCloudLogs,
+                            extraCloudUauc,
+                            extraCloudCars,
+                            extraCloudAcc,
+                            authoritativeCloud: false
+                        });
+
+                        saveStateToLocalBackup();
+                        const newCountSummary = `${zoneInspectionLogs.length}|${uaucData.length}|${carParData.length}|${accidentData.length}|${fireExtinguishers.length}|${firePumps.length}`;
+
+                        // Check if this device had local records not yet in the cloud snapshot
+                        let cloudLogCount = extraCloudLogs.length;
+                        try { if (masterData.zoneInspectionLogs) cloudLogCount += JSON.parse(masterData.zoneInspectionLogs).length; } catch (e) {}
+                        let cloudUaucCount = extraCloudUauc.length;
+                        try { if (masterData.uaucData) cloudUaucCount += JSON.parse(masterData.uaucData).length; } catch (e) {}
+
+                        const localHasUnpushedRecords = hasPendingUnsynced ||
+                            zoneInspectionLogs.length > cloudLogCount ||
+                            uaucData.length > cloudUaucCount;
+
+                        const wasFirstSnapshot = !hasInitialCloudSnapshot;
+                        hasInitialCloudSnapshot = true;
+
+                        if (masterData.updatedAt && masterData.updatedAt !== lastKnownCloudUpdatedAt) {
+                            lastKnownCloudUpdatedAt = masterData.updatedAt;
+                            const statusTextEl = document.getElementById('cloudStatusText');
+                            const statusDotEl = document.getElementById('cloudStatusDot');
+                            if (statusTextEl) statusTextEl.textContent = "Live Cloud Sync";
+                            if (statusDotEl) statusDotEl.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                        }
+
+                        refreshAllViews();
+
+                        if (localHasUnpushedRecords && (wasFirstSnapshot || hasPendingUnsynced)) {
+                            await saveAllData();
+                        } else if (!wasFirstSnapshot && prevCountSummary !== newCountSummary && masterData.updatedBy && masterData.updatedBy !== currentUserUid) {
+                            showToast("Real-time update received from another device!");
+                        }
+                    };
+
+                    onSnapshot(sharedStateColRef, (colSnapshot) => {
+                        const docsMap = new Map();
+                        colSnapshot.forEach(docSnap => {
+                            docsMap.set(docSnap.id, docSnap.data());
+                        });
+
+                        if (isSavingToCloud) {
+                            pendingRemoteSnapshotDocs = docsMap;
+                            return;
+                        }
+
+                        if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer);
+                        realtimeDebounceTimer = setTimeout(() => {
+                            processCollectionDocsMap(docsMap);
+                        }, 120);
                     }, (error) => {
                         console.warn("Firestore listener error:", error);
                         document.getElementById('cloudStatusText').textContent = "Sync Blocked (Check Rules)";
@@ -1734,14 +1845,25 @@
                 } catch (e) {}
             }
             if (data.recycleBinData) {
-                try { recycleBinData = sanitizeRecycleBinForCloud(JSON.parse(data.recycleBinData)); } catch (e) {}
+                try {
+                    const cloudBin = sanitizeRecycleBinForCloud(JSON.parse(data.recycleBinData));
+                    recycleBinData = mergeArraysByKey(
+                        recycleBinData,
+                        cloudBin,
+                        b => `${b.category}_${b.label}_${b.deletedAt}`,
+                        new Set(),
+                        true
+                    ).slice(0, 20);
+                } catch (e) {}
             }
             const deletedKeys = getRecycleBinDeletedKeysSet();
 
-            if (data.zones) {
+            const cloudZonesTs = Number(data.zonesUpdatedAt || 0);
+            if (data.zones && cloudZonesTs >= zonesUpdatedAt) {
                 try {
                     const parsedZones = JSON.parse(data.zones);
                     parsedZones.forEach((z, i) => { if (ZONES_DATA[i]) ZONES_DATA[i].parameters = z.parameters; });
+                    zonesUpdatedAt = cloudZonesTs;
                 } catch (e) {}
             }
             if (data.fireExtinguishers) {
@@ -1790,20 +1912,29 @@
             if (data.zoneInspectionLogs) {
                 try {
                     const cloudLogs = [...JSON.parse(data.zoneInspectionLogs), ...extraCloudLogs];
-                    zoneInspectionLogs = authoritativeCloud
+                    const mergedLogs = authoritativeCloud
                         ? mergeArraysByKey(cloudLogs, [], l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys, true)
                         : mergeArraysByKey(zoneInspectionLogs, cloudLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys, true);
+                    zoneInspectionLogs = filterAndDedupeZoneLogs(mergedLogs, deletedKeys);
                 } catch (e) {}
             }
-            if (data.personnelData) {
-                try { personnelData = JSON.parse(data.personnelData); } catch (e) {}
+            const cloudPersonnelTs = Number(data.personnelUpdatedAt || 0);
+            if (data.personnelData && cloudPersonnelTs >= personnelUpdatedAt) {
+                try {
+                    personnelData = JSON.parse(data.personnelData);
+                    personnelUpdatedAt = cloudPersonnelTs;
+                } catch (e) {}
             }
-            if (data.securityConfig) {
-                try { securityConfig = JSON.parse(data.securityConfig); } catch (e) {}
+            const cloudSecurityTs = Number(data.securityUpdatedAt || 0);
+            if (data.securityConfig && cloudSecurityTs >= securityUpdatedAt) {
+                try {
+                    securityConfig = JSON.parse(data.securityConfig);
+                    securityUpdatedAt = cloudSecurityTs;
+                } catch (e) {}
             }
         }
 
-        // --- ROBUST CLOUD SAVE (MERGES MULTI-USER SUBMISSIONS + MULTI-CHUNK SHARDING UNDER 600KB PER DOC) ---
+        // --- ROBUST CLOUD SAVE (SERIALIZED QUEUE + MULTI-USER MERGE + MULTI-CHUNK SHARDING UNDER 600KB PER DOC) ---
         async function saveAllData(deletedKey = null) {
             if (deletedKey && !deletedRecordKeys.includes(deletedKey)) {
                 deletedRecordKeys.push(deletedKey);
@@ -1811,6 +1942,7 @@
             const deletedKeysSet = getRecycleBinDeletedKeysSet();
             firePumps = filterOutLegacyDummyPumps(firePumps);
             uaucData = filterAndDedupeUaucList(uaucData, deletedKeysSet);
+            zoneInspectionLogs = filterAndDedupeZoneLogs(zoneInspectionLogs, deletedKeysSet);
             recycleBinData = sanitizeRecycleBinForCloud(recycleBinData);
             saveStateToLocalBackup();
             refreshAllViews();
@@ -1818,10 +1950,18 @@
             // Cache latest submissions in localStorage so nothing is lost if mobile signal drops
             try {
                 localStorage.setItem('klsm_unsynced_submissions', JSON.stringify({
-                    zoneInspectionLogs: zoneInspectionLogs.slice(0, 15),
-                    uaucData: uaucData.slice(0, 25)
+                    zoneInspectionLogs: zoneInspectionLogs.slice(0, 20),
+                    uaucData: uaucData.slice(0, 30)
                 }));
             } catch (cacheErr) {}
+
+            // Chain onto saveQueuePromise so concurrent saves never race or overwrite each other
+            saveQueuePromise = saveQueuePromise.then(() => executeCloudSaveInternal()).catch(() => false);
+            return saveQueuePromise;
+        }
+
+        async function executeCloudSaveInternal() {
+            const deletedKeysSet = getRecycleBinDeletedKeysSet();
 
             // Wait for cloud initialization if it is still in progress
             if (!db && cloudInitPromise) {
@@ -1831,7 +1971,7 @@
                 currentUserUid = "user-" + crypto.randomUUID().substring(0, 8);
             }
             if (!db) {
-                showToast("Saved on device! Will sync when Cloud connects.");
+                showToast("Saved on device! Will auto-sync when Cloud connects.");
                 return true;
             }
 
@@ -1841,6 +1981,7 @@
             if (statusDotEl) statusDotEl.className = "w-2 h-2 rounded-full bg-amber-500 animate-ping";
 
             isSavingToCloud = true;
+            pendingRemoteSnapshotDocs = null;
             try {
                 // Compress any oversized legacy or newly added photos first so payload stays compact
                 await ensureAllPhotosCompressed();
@@ -1861,6 +2002,30 @@
                                         deletedKeysSet.add(k);
                                     });
                                 }
+                            } catch (e) {}
+                        }
+
+                        // Merge admin zones, personnel, and security if cloud has newer changes
+                        const cloudZonesTs = Number(cloudData.zonesUpdatedAt || 0);
+                        if (cloudData.zones && cloudZonesTs > zonesUpdatedAt) {
+                            try {
+                                const parsedZones = JSON.parse(cloudData.zones);
+                                parsedZones.forEach((z, i) => { if (ZONES_DATA[i]) ZONES_DATA[i].parameters = z.parameters; });
+                                zonesUpdatedAt = cloudZonesTs;
+                            } catch (e) {}
+                        }
+                        const cloudPersonnelTs = Number(cloudData.personnelUpdatedAt || 0);
+                        if (cloudData.personnelData && cloudPersonnelTs > personnelUpdatedAt) {
+                            try {
+                                personnelData = JSON.parse(cloudData.personnelData);
+                                personnelUpdatedAt = cloudPersonnelTs;
+                            } catch (e) {}
+                        }
+                        const cloudSecurityTs = Number(cloudData.securityUpdatedAt || 0);
+                        if (cloudData.securityConfig && cloudSecurityTs > securityUpdatedAt) {
+                            try {
+                                securityConfig = JSON.parse(cloudData.securityConfig);
+                                securityUpdatedAt = cloudSecurityTs;
                             } catch (e) {}
                         }
 
@@ -1885,10 +2050,14 @@
 
                         if (cloudData.zoneInspectionLogs) {
                             const cloudLogs = [...JSON.parse(cloudData.zoneInspectionLogs), ...extraCloudLogs];
-                            zoneInspectionLogs = mergeArraysByKey(
-                                zoneInspectionLogs,
-                                cloudLogs,
-                                l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`,
+                            zoneInspectionLogs = filterAndDedupeZoneLogs(
+                                mergeArraysByKey(
+                                    zoneInspectionLogs,
+                                    cloudLogs,
+                                    l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`,
+                                    deletedKeysSet,
+                                    true
+                                ),
                                 deletedKeysSet
                             );
                         }
@@ -1899,7 +2068,8 @@
                                     uaucData,
                                     cloudUauc,
                                     u => u.id || `${u.date}_${u.zone}_${u.observation}`,
-                                    deletedKeysSet
+                                    deletedKeysSet,
+                                    true
                                 ),
                                 deletedKeysSet
                             );
@@ -1910,7 +2080,8 @@
                                 carParData,
                                 cloudCars,
                                 c => c.ref || `${c.dateIssued}_${c.detail}`,
-                                deletedKeysSet
+                                deletedKeysSet,
+                                true
                             );
                         }
                         if (cloudData.accidentData) {
@@ -1919,7 +2090,8 @@
                                 accidentData,
                                 cloudAcc,
                                 a => a.id || `${a.datetime}_${a.person}`,
-                                deletedKeysSet
+                                deletedKeysSet,
+                                true
                             );
                         }
                         if (cloudData.fireExtinguishers) {
@@ -1928,7 +2100,8 @@
                                 fireExtinguishers,
                                 cloudExt,
                                 f => f.id || `${f.zone}_${f.type}`,
-                                deletedKeysSet
+                                deletedKeysSet,
+                                true
                             );
                         }
                         if (cloudData.firePumps) {
@@ -1938,7 +2111,8 @@
                                     firePumps,
                                     cloudPumps,
                                     p => p.id || `${p.name}_${p.equipCategory}`,
-                                    deletedKeysSet
+                                    deletedKeysSet,
+                                    true
                                 )
                             );
                         }
@@ -1950,9 +2124,15 @@
                 // Re-compress any merged photos from cloud that might have been uncompressed
                 await ensureAllPhotosCompressed();
 
-                // Sort newest first
-                zoneInspectionLogs.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
-                uaucData.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+                // Sort newest first (by date and updatedAt)
+                zoneInspectionLogs.sort((a, b) => {
+                    const cmp = String(b.date || '').localeCompare(String(a.date || ''));
+                    return cmp !== 0 ? cmp : (Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+                });
+                uaucData.sort((a, b) => {
+                    const cmp = String(b.date || '').localeCompare(String(a.date || ''));
+                    return cmp !== 0 ? cmp : (Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+                });
 
                 // 2. Partition records so master AND every overflow chunk is strictly < 600,000 bytes (well below 1,048,576 bytes)
                 const SAFE_DOC_LIMIT = 600000;
@@ -1966,13 +2146,15 @@
                 let overflowCars = [];
                 let overflowAcc = [];
 
+                const nowIso = new Date().toISOString();
                 const buildMasterPayload = (zLogs, uList, cList, aList, chunkCount) => ({
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: nowIso,
                     updatedBy: currentUserUid,
                     hasOverflowLogs: chunkCount > 0,
                     overflowChunkCount: chunkCount,
                     deletedRecordKeys: JSON.stringify(Array.from(new Set(deletedRecordKeys)).slice(0, 500)),
                     zones: JSON.stringify(ZONES_DATA),
+                    zonesUpdatedAt,
                     fireExtinguishers: JSON.stringify(fireExtinguishers),
                     firePumps: JSON.stringify(firePumps),
                     carParData: JSON.stringify(cList),
@@ -1980,7 +2162,9 @@
                     accidentData: JSON.stringify(aList),
                     zoneInspectionLogs: JSON.stringify(zLogs),
                     personnelData: JSON.stringify(personnelData),
+                    personnelUpdatedAt,
                     securityConfig: JSON.stringify(securityConfig),
+                    securityUpdatedAt,
                     recycleBinData: JSON.stringify(recycleBinData)
                 });
 
@@ -2069,6 +2253,7 @@
                 }
 
                 payload = buildMasterPayload(primaryLogs, primaryUauc, primaryCars, primaryAcc, overflowChunks.length);
+                lastKnownCloudUpdatedAt = nowIso;
                 await setDoc(stateDocRef, payload);
 
                 // Clear unsynced queue now that cloud write succeeded
@@ -2078,6 +2263,17 @@
                 if (statusTextEl) statusTextEl.textContent = "Live Cloud Sync";
                 if (statusDotEl) statusDotEl.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
                 isSavingToCloud = false;
+
+                // If another user's snapshot arrived while we were saving, reconcile it immediately
+                if (pendingRemoteSnapshotDocs) {
+                    const bufferedMaster = pendingRemoteSnapshotDocs.get('master');
+                    pendingRemoteSnapshotDocs = null;
+                    if (bufferedMaster && bufferedMaster.updatedAt && bufferedMaster.updatedAt !== nowIso) {
+                        applyCloudSnapshotData(bufferedMaster, { authoritativeCloud: false });
+                        saveStateToLocalBackup();
+                    }
+                }
+
                 refreshAllViews();
                 return true;
             } catch (err) {
@@ -2314,6 +2510,7 @@
             const adminOnly = document.getElementById('adminOnlyDeleteToggle')?.checked;
             if (pinVal) securityConfig.deletePin = pinVal;
             securityConfig.adminOnlyDelete = Boolean(adminOnly);
+            securityUpdatedAt = Date.now();
             saveAllData();
             showToast("Anti-Bot & Delete security settings updated!");
         }
@@ -2362,16 +2559,40 @@
             const entry = recycleBinData[idx];
             if (!entry) return;
 
+            const p = entry.payload;
+            if (p && typeof p === 'object') {
+                p.updatedAt = Date.now();
+                // Remove restored item's keys from deletedRecordKeys so it is not filtered out on sync
+                const keysToRemove = new Set([
+                    p.id,
+                    p.ref,
+                    p.name,
+                    `${p.date}_${p.zone}_${p.inspector}_${p.score}`,
+                    `${p.date}_${p.zone}_${p.observation}`,
+                    `${p.dateIssued}_${p.detail}`,
+                    `${p.datetime}_${p.person}`,
+                    `${p.name}_${p.equipCategory}`,
+                    `${p.zone}_${p.type}`
+                ].filter(Boolean));
+                deletedRecordKeys = deletedRecordKeys.filter(k => !keysToRemove.has(k));
+            }
+
             if (entry.category === "Zone Log") zoneInspectionLogs.unshift(entry.payload);
             else if (entry.category === "Extinguisher") fireExtinguishers.push(entry.payload);
             else if (entry.category === "Hydrant/Pump") firePumps.push(entry.payload);
             else if (entry.category === "CAR/PAR") carParData.unshift(entry.payload);
             else if (entry.category === "UAUC") uaucData.unshift(entry.payload);
             else if (entry.category === "Accident") accidentData.unshift(entry.payload);
-            else if (entry.category === "Personnel") personnelData.push(entry.payload);
+            else if (entry.category === "Personnel") {
+                personnelData.push(entry.payload);
+                personnelUpdatedAt = Date.now();
+            }
             else if (entry.category === "Zone Parameter") {
                 const targetZone = ZONES_DATA.find(z => z.id === entry.payload.zoneId);
-                if (targetZone) targetZone.parameters.push(entry.payload.param);
+                if (targetZone) {
+                    targetZone.parameters.push(entry.payload.param);
+                    zonesUpdatedAt = Date.now();
+                }
             } else if (entry.category === "Sub-Parameter") {
                 const targetZone = ZONES_DATA.find(z => z.id === entry.payload.zoneId);
                 if (targetZone && targetZone.parameters[entry.payload.paramIdx]) {
@@ -2379,6 +2600,7 @@
                         targetZone.parameters[entry.payload.paramIdx].subParameters = [];
                     }
                     targetZone.parameters[entry.payload.paramIdx].subParameters.push(entry.payload.subName);
+                    zonesUpdatedAt = Date.now();
                 }
             }
 
@@ -3336,7 +3558,8 @@
                         reporter: currentUser.name,
                         risk: "MEDIUM",
                         status: "In Progress",
-                        photos: itemPhotos
+                        photos: itemPhotos,
+                        updatedAt: Date.now()
                     });
                 }
 
@@ -3359,7 +3582,8 @@
                             reporter: currentUser.name,
                             risk: "MEDIUM",
                             status: "In Progress",
-                            photos: itemPhotos
+                            photos: itemPhotos,
+                            updatedAt: Date.now()
                         });
                     }
                     subDetails.push({
@@ -3389,19 +3613,70 @@
                 score: scorePct,
                 remarks: remarks,
                 photos: [...pendingPhotos],
-                details: paramDetails
+                details: paramDetails,
+                updatedAt: Date.now()
             });
 
             pendingPhotos = [];
             closeModal();
             const synced = await saveAllData();
-            if (synced) {
-                if (unsatCount > 0) {
-                    showToast(`Cloud Synced! ${unsatCount} Unsatisfactory finding(s) auto-logged to Daily Findings.`);
-                } else {
-                    showToast("Zone inspection & photos saved to Cloud successfully!");
-                }
+        async function saveFireExtinguisher(e, editIndex) {
+            e.preventDefault();
+            const record = {
+                id: document.getElementById('pfeId').value.trim(),
+                type: document.getElementById('pfeType').value,
+                capacity: document.getElementById('pfeCap').value.trim(),
+                mfgYear: document.getElementById('pfeMfgYear').value.trim(),
+                zone: document.getElementById('pfeZone').value,
+                pressure: document.getElementById('pfePressure').value,
+                expiry: document.getElementById('pfeExpiry').value,
+                status: document.getElementById('pfeStatus').value,
+                updatedAt: Date.now()
+            };
+
+            if (editIndex !== null && editIndex !== undefined) {
+                fireExtinguishers[editIndex] = record;
+            } else {
+                fireExtinguishers.push(record);
             }
+            closeModal();
+            await saveAllData();
+            showToast(editIndex !== null && editIndex !== undefined ? "Fire extinguisher updated & synced!" : "New fire extinguisher added & synced!");
+        }
+        async function saveFirePump(e, editIndex) {
+            e.preventDefault();
+            const isEdit = editIndex !== null && editIndex !== undefined && firePumps[editIndex];
+            const record = {
+                id: isEdit ? firePumps[editIndex].id : `HRP-${Date.now()}`,
+                equipCategory: document.getElementById('pumpEquipCategory').value,
+                name: document.getElementById('pumpName').value,
+                hoseCondition: document.getElementById('pumpHoseCondition')?.value || "Good",
+                coupling: document.getElementById('pumpCoupling')?.value || "Good",
+                nozzle: document.getElementById('pumpNozzle')?.value || "Functional",
+                hydrantBox: document.getElementById('pumpHydrantBox')?.value || "Good",
+                valve: document.getElementById('pumpValve')?.value || "Operational",
+                batteryCond: document.getElementById('pumpBatteryCond')?.value || "Good (12.8V)",
+                engineOil: document.getElementById('pumpEngineOil')?.value || "Normal Level",
+                dieselFuel: document.getElementById('pumpDieselFuel')?.value || "Full (>80%)",
+                radiatorCoolant: document.getElementById('pumpRadiatorCoolant')?.value || "Normal Level",
+                controlPanel: document.getElementById('pumpControlPanel')?.value || "Auto Mode / Good",
+                inletOutletValve: document.getElementById('pumpInletOutletValve')?.value || "Open & Operational",
+                pressureGauge: document.getElementById('pumpPressureGauge')?.value || "Functional",
+                electricMotor: document.getElementById('pumpElectricMotor')?.value || "Good / Normal",
+                lastTest: document.getElementById('pumpLastTest').value,
+                status: document.getElementById('pumpStatus').value,
+                updatedAt: Date.now()
+            };
+
+            if (editIndex !== null && editIndex !== undefined) {
+                firePumps[editIndex] = record;
+            } else {
+                firePumps.push(record);
+            }
+            closeModal();
+            await saveAllData();
+            showToast(editIndex !== null && editIndex !== undefined ? "Fire equipment / pump updated & synced!" : "New Fire equipment / pump added & synced!");
+        }
         }
 
         // --- FIRE FIGHTING EQUIPMENT CHECKLIST (EXTINGUISHERS & PUMPS) ---
@@ -4800,7 +5075,8 @@
                 actionTaken: document.getElementById('accActionTaken')?.value?.trim() || "",
                 dosh: document.getElementById('accDosh')?.value || "Pending Review",
                 status: isEdit ? existing.status : "Open",
-                photos: [...pendingPhotos]
+                photos: [...pendingPhotos],
+                updatedAt: Date.now()
             };
 
             pendingPhotos = [];
@@ -4909,6 +5185,10 @@
             const select = document.getElementById('adminZoneSelect');
             const list = document.getElementById('adminParamList');
             if (!select || !list) return;
+            // Avoid wiping out an admin input field if the admin is actively typing while a background sync arrives
+            if (document.activeElement && list.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') {
+                return;
+            }
 
             const zoneId = select.value || ZONES_DATA[0].id;
             const zone = ZONES_DATA.find(z => z.id === zoneId);
@@ -4966,6 +5246,7 @@
             if (zone) {
                 zone.parameters.push({ name: name, criteria: "Standard HSE Compliance", subParameters: [] });
                 document.getElementById('newParamName').value = '';
+                zonesUpdatedAt = Date.now();
                 saveAllData();
                 showToast("Parameter added successfully!");
             }
@@ -4983,6 +5264,8 @@
                 }
                 zone.parameters[paramIdx].subParameters.push(subName);
                 input.value = '';
+                if (document.activeElement === input) input.blur();
+                zonesUpdatedAt = Date.now();
                 saveAllData();
                 showToast(`Sub-parameter added under "${zone.parameters[paramIdx].name}"!`);
             }
@@ -4999,6 +5282,7 @@
                     { zoneId, paramIdx, subName },
                     () => {
                         zone.parameters[paramIdx].subParameters.splice(subIdx, 1);
+                        zonesUpdatedAt = Date.now();
                         showToast("Sub-parameter moved to Recovery Vault!");
                     }
                 );
@@ -5011,6 +5295,7 @@
                 const param = zone.parameters[idx];
                 requestSecureDelete("Zone Parameter", `${param.name} (${zone.name})`, { zoneId, param }, () => {
                     zone.parameters.splice(idx, 1);
+                    zonesUpdatedAt = Date.now();
                     showToast("Parameter moved to Recovery Vault!");
                 });
             }
@@ -5097,6 +5382,7 @@
 
             const menu = document.getElementById('multiZoneDropdownMenu');
             if (menu) menu.classList.add('hidden');
+            personnelUpdatedAt = Date.now();
             resetPersonnelForm();
             saveAllData();
         }
@@ -5141,6 +5427,7 @@
             if (!item) return;
             requestSecureDelete("Personnel", `${item.name} (${item.role})`, item, () => {
                 personnelData.splice(idx, 1);
+                personnelUpdatedAt = Date.now();
                 showToast("Personnel moved to Recovery Vault.");
             });
         }
@@ -5773,6 +6060,23 @@
             refreshAllViews();
             initCharts();
             initCloudSync();
+
+            // Auto-sync when device regains internet, tab is focused, or another tab updates localStorage
+            window.addEventListener('online', () => {
+                showToast("Internet reconnected! Auto-syncing with Cloud...");
+                saveAllData();
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && db && localStorage.getItem('klsm_unsynced_submissions')) {
+                    saveAllData();
+                }
+            });
+            window.addEventListener('storage', (e) => {
+                if (e.key === LOCAL_STORAGE_STATE_KEY) {
+                    loadStateFromLocalBackup();
+                    refreshAllViews();
+                }
+            });
         });
     </script>
 </body>
