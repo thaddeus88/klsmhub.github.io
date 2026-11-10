@@ -1134,6 +1134,39 @@
             }
         ];
 
+        const LEGACY_DUMMY_UAUC_IDS = new Set(["UAUC-101", "UAUC-102", "UAUC-103"]);
+        let deletedRecordKeys = [];
+
+        function filterAndDedupeUaucList(list, deletedSet = new Set()) {
+            if (!Array.isArray(list)) return [];
+            const seenIds = new Set();
+            const seenSignatures = new Map();
+            const cleaned = [];
+
+            list.forEach(item => {
+                if (!item) return;
+                const idKey = String(item.id || '').trim();
+                if (LEGACY_DUMMY_UAUC_IDS.has(idKey)) return;
+                const compositeKey = idKey || `${item.date}_${item.zone}_${item.observation}`;
+                if (deletedSet.has(idKey) || deletedSet.has(compositeKey)) return;
+
+                const sig = `${String(item.date || '').trim()}|${String(item.zone || '').trim()}|${String(item.category || '').trim()}|${String(item.observation || '').trim().toLowerCase()}`;
+
+                if (idKey && seenIds.has(idKey)) return;
+                if (seenSignatures.has(sig)) {
+                    const existingIdx = seenSignatures.get(sig);
+                    cleaned[existingIdx] = pickMergedRecord(cleaned[existingIdx], item, true);
+                    return;
+                }
+
+                if (idKey) seenIds.add(idKey);
+                seenSignatures.set(sig, cleaned.length);
+                cleaned.push(item);
+            });
+
+            return cleaned;
+        }
+
         let accidentData = [];
 
         let zoneInspectionLogs = [
@@ -1329,7 +1362,7 @@
         }
 
         function getRecycleBinDeletedKeysSet() {
-            const set = new Set();
+            const set = new Set(Array.isArray(deletedRecordKeys) ? deletedRecordKeys : []);
             if (!Array.isArray(recycleBinData)) return set;
             recycleBinData.forEach(entry => {
                 const p = entry?.payload;
@@ -1352,6 +1385,60 @@
             return set;
         }
 
+        // --- HELPER: COMPRESS ANY OVERSIZED BASE64 IMAGES TO PREVENT 1MB FIRESTORE LIMIT ---
+        function compressSingleDataUrl(dataUrl, maxDim = 460, quality = 0.48) {
+            return new Promise((resolve) => {
+                if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image') || dataUrl.length <= 45000) {
+                    resolve(dataUrl);
+                    return;
+                }
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        let w = img.width || 460;
+                        let h = img.height || 340;
+                        if (w > maxDim || h > maxDim) {
+                            if (w > h) { h = Math.round(h * (maxDim / w)); w = maxDim; }
+                            else { w = Math.round(w * (maxDim / h)); h = maxDim; }
+                        }
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        const shrunk = canvas.toDataURL('image/jpeg', quality);
+                        resolve(shrunk.length < dataUrl.length ? shrunk : dataUrl);
+                    } catch (err) {
+                        resolve(dataUrl);
+                    }
+                };
+                img.onerror = () => resolve(dataUrl);
+                img.src = dataUrl;
+            });
+        }
+
+        async function compressPhotosInCollection(records) {
+            if (!Array.isArray(records)) return;
+            for (const rec of records) {
+                if (!rec || !Array.isArray(rec.photos)) continue;
+                for (let i = 0; i < rec.photos.length; i++) {
+                    const p = rec.photos[i];
+                    if (p && p.dataUrl && p.dataUrl.length > 45000) {
+                        p.dataUrl = await compressSingleDataUrl(p.dataUrl, 460, 0.48);
+                    }
+                }
+            }
+        }
+
+        async function ensureAllPhotosCompressed() {
+            await Promise.all([
+                compressPhotosInCollection(zoneInspectionLogs),
+                compressPhotosInCollection(uaucData),
+                compressPhotosInCollection(carParData),
+                compressPhotosInCollection(accidentData)
+            ]);
+        }
+
         function saveStateToLocalBackup() {
             try {
                 localStorage.setItem(LOCAL_STORAGE_STATE_KEY, JSON.stringify({
@@ -1364,6 +1451,7 @@
                     zoneInspectionLogs,
                     personnelData,
                     securityConfig,
+                    deletedRecordKeys: Array.from(new Set(deletedRecordKeys)).slice(0, 500),
                     recycleBinData: sanitizeRecycleBinForCloud(recycleBinData)
                 }));
             } catch (e) {
@@ -1376,6 +1464,9 @@
                 const raw = localStorage.getItem(LOCAL_STORAGE_STATE_KEY);
                 if (!raw) return;
                 const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed.deletedRecordKeys)) {
+                    deletedRecordKeys = parsed.deletedRecordKeys;
+                }
                 if (Array.isArray(parsed.recycleBinData)) {
                     recycleBinData = parsed.recycleBinData;
                 }
@@ -1396,7 +1487,10 @@
                     carParData = mergeArraysByKey(parsed.carParData, carParData, c => c.ref || `${c.dateIssued}_${c.detail}`, deletedKeys);
                 }
                 if (Array.isArray(parsed.uaucData)) {
-                    uaucData = mergeArraysByKey(parsed.uaucData, uaucData, u => u.id || `${u.date}_${u.zone}_${u.observation}`, deletedKeys);
+                    uaucData = filterAndDedupeUaucList(
+                        mergeArraysByKey(parsed.uaucData, uaucData, u => u.id || `${u.date}_${u.zone}_${u.observation}`, deletedKeys),
+                        deletedKeys
+                    );
                 }
                 if (Array.isArray(parsed.accidentData)) {
                     accidentData = mergeArraysByKey(parsed.accidentData, accidentData, a => a.id || `${a.datetime}_${a.person}`, deletedKeys);
@@ -1414,104 +1508,7 @@
                 console.warn("Could not load local state backup:", e);
             }
         }
-
-        // --- HELPER: SLIM RECYCLE BIN TO PREVENT FIRESTORE 1MB DOCUMENT OVERFLOW ---
-        function sanitizeRecycleBinForCloud(binList) {
-            if (!Array.isArray(binList)) return [];
-            return binList.slice(0, 25).map(entry => {
-                if (!entry || !entry.payload) return entry;
-                const slimPayload = { ...entry.payload };
-                // Strip heavy base64 images from deleted recycle bin items so they never block cloud saves
-                if (Array.isArray(slimPayload.photos) && slimPayload.photos.length > 0) {
-                    slimPayload.photos = [];
-                }
-                return { ...entry, payload: slimPayload };
-            });
-        }
-
-        // --- CLOUD FIRESTORE INITIALIZATION (MULTI-USER) ---
-        async function initCloudSync(overrideConfig = null) {
-            if (cloudInitPromise && !overrideConfig) {
-                return cloudInitPromise;
-            }
-            cloudInitPromise = (async () => {
-                try {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const encodedUrlCfg = urlParams.get('fb_cfg');
-                    if (encodedUrlCfg && !overrideConfig) {
-                        try {
-                            const decodedCfg = JSON.parse(atob(encodedUrlCfg));
-                            if (decodedCfg && decodedCfg.apiKey && decodedCfg.projectId) {
-                                localStorage.setItem('klsm_firebase_config', JSON.stringify(decodedCfg));
-                                window.__custom_firebase_config = decodedCfg;
-                                overrideConfig = decodedCfg;
-                            }
-                        } catch (e) {
-                            console.warn("Invalid URL Firebase config parameter:", e);
-                        }
-                    }
-
-                    let rawConfig = overrideConfig;
-                    if (!rawConfig && typeof __firebase_config !== 'undefined' && __firebase_config) {
-                        rawConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
-                    }
-                    if (!rawConfig && window.__custom_firebase_config) {
-                        rawConfig = window.__custom_firebase_config;
-                    }
-                    if (!rawConfig) {
-                        const savedLocalConfig = localStorage.getItem('klsm_firebase_config');
-                        if (savedLocalConfig) {
-                            try { rawConfig = JSON.parse(savedLocalConfig); } catch (e) {}
-                        }
-                    }
-                    if (!rawConfig && (DEFAULT_KLSM_FIREBASE_CONFIG.apiKey || DEFAULT_KLSM_FIREBASE_CONFIG.apiKeyB64) && DEFAULT_KLSM_FIREBASE_CONFIG.projectId) {
-                        const resolvedKey = DEFAULT_KLSM_FIREBASE_CONFIG.apiKey || atob(DEFAULT_KLSM_FIREBASE_CONFIG.apiKeyB64);
-                        rawConfig = {
-                            ...DEFAULT_KLSM_FIREBASE_CONFIG,
-                            apiKey: resolvedKey
-                        };
-                    }
-
-                    if (!rawConfig || !rawConfig.apiKey || !rawConfig.projectId) {
-                        document.getElementById('cloudStatusText').textContent = "Setup Cloud Link";
-                        const dot = document.getElementById('cloudStatusDot');
-                        if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
-                        document.getElementById('navUserId').textContent = "UID: local-session";
-                        return;
-                    }
-
-                    customFirebaseConfig = rawConfig;
-                    const app = initializeApp(rawConfig, "klsmApp_" + Date.now());
-                    auth = getAuth(app);
-                    db = getFirestore(app);
-
-                    // Try Firebase Auth first; if any Auth error occurs (e.g. unauthorized-domain on GitHub Pages or anonymous disabled),
-                    // still assign a fallback UID and connect Firestore so all users can submit inspections to the cloud.
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token && !overrideConfig) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                        currentUserUid = auth.currentUser?.uid || ("user-" + crypto.randomUUID().substring(0, 8));
-                    } catch (authErr) {
-                        console.warn("Firebase Auth fallback active (continuing with direct Firestore sync):", authErr?.code || authErr);
-                        currentUserUid = "user-" + crypto.randomUUID().substring(0, 8);
-                    }
-
-                    document.getElementById('navUserId').textContent = `UID: ${currentUserUid}`;
-                    document.getElementById('cloudStatusText').textContent = "Live Cloud Sync";
-                    const dot = document.getElementById('cloudStatusDot');
-                    if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
-
-                    onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            currentUserUid = user.uid;
-                            document.getElementById('navUserId').textContent = `UID: ${currentUserUid}`;
-                        }
-                    });
-
-                    // Attach real-time listener to master document and overflow logs document
+                    // Attach real-time listener to master document and overflow logs documents
                     const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master');
                     const overflowDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master_logs_overflow');
 
@@ -1528,10 +1525,13 @@
                                 );
                             }
                             if (Array.isArray(parsedQueue.uaucData) && parsedQueue.uaucData.length > 0) {
-                                uaucData = mergeArraysByKey(
-                                    parsedQueue.uaucData,
-                                    uaucData,
-                                    u => u.id || `${u.date}_${u.zone}_${u.observation}`
+                                uaucData = filterAndDedupeUaucList(
+                                    mergeArraysByKey(
+                                        parsedQueue.uaucData,
+                                        uaucData,
+                                        u => u.id || `${u.date}_${u.zone}_${u.observation}`
+                                    ),
+                                    getRecycleBinDeletedKeysSet()
                                 );
                             }
                         } catch (qErr) {
@@ -1543,42 +1543,57 @@
                         if (isSavingToCloud) return;
                         if (snapshot.exists()) {
                             const data = snapshot.data();
-                            applyCloudSnapshotData(data);
+                            const hasPendingUnsynced = Boolean(localStorage.getItem('klsm_unsynced_submissions'));
 
-                            // Check if overflow logs exist in companion document
-                            if (data.hasOverflowLogs) {
+                            // Load any overflow chunks first so we have the complete cloud dataset
+                            let extraCloudLogs = [];
+                            let extraCloudUauc = [];
+                            let extraCloudCars = [];
+                            let extraCloudAcc = [];
+
+                            const chunkCount = Number(data.overflowChunkCount || 0);
+                            if (chunkCount > 0) {
+                                for (let cIdx = 0; cIdx < chunkCount; cIdx++) {
+                                    try {
+                                        const chunkRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', `master_overflow_${cIdx}`);
+                                        const chunkSnap = await getDoc(chunkRef);
+                                        if (chunkSnap.exists()) {
+                                            const cData = chunkSnap.data();
+                                            if (cData.zoneInspectionLogs) extraCloudLogs.push(...JSON.parse(cData.zoneInspectionLogs));
+                                            if (cData.uaucData) extraCloudUauc.push(...JSON.parse(cData.uaucData));
+                                            if (cData.carParData) extraCloudCars.push(...JSON.parse(cData.carParData));
+                                            if (cData.accidentData) extraCloudAcc.push(...JSON.parse(cData.accidentData));
+                                        }
+                                    } catch (chunkErr) {
+                                        console.warn(`Could not read overflow chunk ${cIdx}:`, chunkErr);
+                                    }
+                                }
+                            } else if (data.hasOverflowLogs) {
+                                // Legacy single overflow doc support
                                 try {
                                     const overflowSnap = await getDoc(overflowDocRef);
                                     if (overflowSnap.exists()) {
                                         const ovData = overflowSnap.data();
-                                        if (ovData.overflowZoneLogs) {
-                                            const extraLogs = JSON.parse(ovData.overflowZoneLogs);
-                                            zoneInspectionLogs = mergeArraysByKey(
-                                                zoneInspectionLogs,
-                                                extraLogs,
-                                                l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`
-                                            );
-                                        }
-                                        if (ovData.overflowUauc) {
-                                            const extraUauc = JSON.parse(ovData.overflowUauc);
-                                            uaucData = mergeArraysByKey(
-                                                uaucData,
-                                                extraUauc,
-                                                u => u.id || `${u.date}_${u.zone}_${u.observation}`,
-                                                getRecycleBinDeletedKeysSet(),
-                                                true
-                                            );
-                                        }
+                                        if (ovData.overflowZoneLogs) extraCloudLogs.push(...JSON.parse(ovData.overflowZoneLogs));
+                                        if (ovData.overflowUauc) extraCloudUauc.push(...JSON.parse(ovData.overflowUauc));
                                     }
                                 } catch (ovErr) {
-                                    console.warn("Could not read overflow logs:", ovErr);
+                                    console.warn("Could not read legacy overflow logs:", ovErr);
                                 }
                             }
+
+                            applyCloudSnapshotData(data, {
+                                extraCloudLogs,
+                                extraCloudUauc,
+                                extraCloudCars,
+                                extraCloudAcc,
+                                authoritativeCloud: !hasPendingUnsynced
+                            });
 
                             saveStateToLocalBackup();
 
                             // If this device had unsynced offline submissions, push them up now
-                            if (localStorage.getItem('klsm_unsynced_submissions')) {
+                            if (hasPendingUnsynced) {
                                 hasInitialCloudSnapshot = true;
                                 await saveAllData();
                             } else {
@@ -1605,8 +1620,24 @@
             return cloudInitPromise;
         }
 
-        function applyCloudSnapshotData(data) {
+        function applyCloudSnapshotData(data, options = {}) {
             if (!data) return;
+            const {
+                extraCloudLogs = [],
+                extraCloudUauc = [],
+                extraCloudCars = [],
+                extraCloudAcc = [],
+                authoritativeCloud = false
+            } = options;
+
+            if (data.deletedRecordKeys) {
+                try {
+                    const cloudDel = JSON.parse(data.deletedRecordKeys);
+                    if (Array.isArray(cloudDel)) {
+                        deletedRecordKeys = Array.from(new Set([...deletedRecordKeys, ...cloudDel]));
+                    }
+                } catch (e) {}
+            }
             if (data.recycleBinData) {
                 try { recycleBinData = sanitizeRecycleBinForCloud(JSON.parse(data.recycleBinData)); } catch (e) {}
             }
@@ -1621,39 +1652,52 @@
             if (data.fireExtinguishers) {
                 try {
                     const cloudExt = JSON.parse(data.fireExtinguishers);
-                    fireExtinguishers = mergeArraysByKey(fireExtinguishers, cloudExt, f => f.id || `${f.zone}_${f.type}`, deletedKeys, true);
+                    fireExtinguishers = authoritativeCloud
+                        ? mergeArraysByKey(cloudExt, [], f => f.id || `${f.zone}_${f.type}`, deletedKeys, true)
+                        : mergeArraysByKey(fireExtinguishers, cloudExt, f => f.id || `${f.zone}_${f.type}`, deletedKeys, true);
                 } catch (e) {}
             }
             if (data.firePumps) {
                 try {
                     const cloudPumps = filterOutLegacyDummyPumps(JSON.parse(data.firePumps));
                     firePumps = filterOutLegacyDummyPumps(
-                        mergeArraysByKey(firePumps, cloudPumps, p => p.id || `${p.name}_${p.equipCategory}`, deletedKeys, true)
+                        authoritativeCloud
+                            ? mergeArraysByKey(cloudPumps, [], p => p.id || `${p.name}_${p.equipCategory}`, deletedKeys, true)
+                            : mergeArraysByKey(firePumps, cloudPumps, p => p.id || `${p.name}_${p.equipCategory}`, deletedKeys, true)
                     );
                 } catch (e) {}
             }
             if (data.carParData) {
                 try {
-                    const cloudCars = JSON.parse(data.carParData);
-                    carParData = mergeArraysByKey(carParData, cloudCars, c => c.ref || `${c.dateIssued}_${c.detail}`, deletedKeys, true);
+                    const cloudCars = [...JSON.parse(data.carParData), ...extraCloudCars];
+                    carParData = authoritativeCloud
+                        ? mergeArraysByKey(cloudCars, [], c => c.ref || `${c.dateIssued}_${c.detail}`, deletedKeys, true)
+                        : mergeArraysByKey(carParData, cloudCars, c => c.ref || `${c.dateIssued}_${c.detail}`, deletedKeys, true);
                 } catch (e) {}
             }
             if (data.uaucData) {
                 try {
-                    const cloudUauc = JSON.parse(data.uaucData);
-                    uaucData = mergeArraysByKey(uaucData, cloudUauc, u => u.id || `${u.date}_${u.zone}_${u.observation}`, deletedKeys, true);
+                    const cloudUauc = [...JSON.parse(data.uaucData), ...extraCloudUauc];
+                    const mergedUauc = authoritativeCloud
+                        ? mergeArraysByKey(cloudUauc, [], u => u.id || `${u.date}_${u.zone}_${u.observation}`, deletedKeys, true)
+                        : mergeArraysByKey(uaucData, cloudUauc, u => u.id || `${u.date}_${u.zone}_${u.observation}`, deletedKeys, true);
+                    uaucData = filterAndDedupeUaucList(mergedUauc, deletedKeys);
                 } catch (e) {}
             }
             if (data.accidentData) {
                 try {
-                    const cloudAcc = JSON.parse(data.accidentData);
-                    accidentData = mergeArraysByKey(accidentData, cloudAcc, a => a.id || `${a.datetime}_${a.person}`, deletedKeys, true);
+                    const cloudAcc = [...JSON.parse(data.accidentData), ...extraCloudAcc];
+                    accidentData = authoritativeCloud
+                        ? mergeArraysByKey(cloudAcc, [], a => a.id || `${a.datetime}_${a.person}`, deletedKeys, true)
+                        : mergeArraysByKey(accidentData, cloudAcc, a => a.id || `${a.datetime}_${a.person}`, deletedKeys, true);
                 } catch (e) {}
             }
             if (data.zoneInspectionLogs) {
                 try {
-                    const cloudLogs = JSON.parse(data.zoneInspectionLogs);
-                    zoneInspectionLogs = mergeArraysByKey(zoneInspectionLogs, cloudLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys, true);
+                    const cloudLogs = [...JSON.parse(data.zoneInspectionLogs), ...extraCloudLogs];
+                    zoneInspectionLogs = authoritativeCloud
+                        ? mergeArraysByKey(cloudLogs, [], l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys, true)
+                        : mergeArraysByKey(zoneInspectionLogs, cloudLogs, l => l.id || `${l.date}_${l.zone}_${l.inspector}_${l.score}`, deletedKeys, true);
                 } catch (e) {}
             }
             if (data.personnelData) {
@@ -1664,9 +1708,14 @@
             }
         }
 
-        // --- ROBUST CLOUD SAVE (MERGES MULTI-USER SUBMISSIONS + HANDLES 1MB FIRESTORE LIMIT) ---
+        // --- ROBUST CLOUD SAVE (MERGES MULTI-USER SUBMISSIONS + MULTI-CHUNK SHARDING UNDER 600KB PER DOC) ---
         async function saveAllData(deletedKey = null) {
+            if (deletedKey && !deletedRecordKeys.includes(deletedKey)) {
+                deletedRecordKeys.push(deletedKey);
+            }
+            const deletedKeysSet = getRecycleBinDeletedKeysSet();
             firePumps = filterOutLegacyDummyPumps(firePumps);
+            uaucData = filterAndDedupeUaucList(uaucData, deletedKeysSet);
             recycleBinData = sanitizeRecycleBinForCloud(recycleBinData);
             saveStateToLocalBackup();
             refreshAllViews();
@@ -1698,18 +1747,49 @@
 
             isSavingToCloud = true;
             try {
-                const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master');
-                const overflowDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master_logs_overflow');
+                // Compress any oversized legacy or newly added photos first so payload stays compact
+                await ensureAllPhotosCompressed();
 
-                // 1. Fetch latest cloud snapshot first so User B never overwrites User A's concurrent submissions
-                const deletedKeysSet = getRecycleBinDeletedKeysSet();
-                if (deletedKey) deletedKeysSet.add(deletedKey);
+                const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master');
+
+                // 1. Fetch latest cloud snapshot (including overflow chunks) so concurrent users never overwrite each other
                 try {
                     const latestSnap = await getDoc(stateDocRef);
                     if (latestSnap.exists()) {
                         const cloudData = latestSnap.data();
+                        if (cloudData.deletedRecordKeys) {
+                            try {
+                                const cDel = JSON.parse(cloudData.deletedRecordKeys);
+                                if (Array.isArray(cDel)) {
+                                    cDel.forEach(k => {
+                                        if (!deletedRecordKeys.includes(k)) deletedRecordKeys.push(k);
+                                        deletedKeysSet.add(k);
+                                    });
+                                }
+                            } catch (e) {}
+                        }
+
+                        let extraCloudLogs = [];
+                        let extraCloudUauc = [];
+                        let extraCloudCars = [];
+                        let extraCloudAcc = [];
+                        const prevChunks = Number(cloudData.overflowChunkCount || 0);
+                        for (let cIdx = 0; cIdx < prevChunks; cIdx++) {
+                            try {
+                                const cRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', `master_overflow_${cIdx}`);
+                                const cSnap = await getDoc(cRef);
+                                if (cSnap.exists()) {
+                                    const cd = cSnap.data();
+                                    if (cd.zoneInspectionLogs) extraCloudLogs.push(...JSON.parse(cd.zoneInspectionLogs));
+                                    if (cd.uaucData) extraCloudUauc.push(...JSON.parse(cd.uaucData));
+                                    if (cd.carParData) extraCloudCars.push(...JSON.parse(cd.carParData));
+                                    if (cd.accidentData) extraCloudAcc.push(...JSON.parse(cd.accidentData));
+                                }
+                            } catch (ce) {}
+                        }
+
                         if (cloudData.zoneInspectionLogs) {
-                            const cloudLogs = JSON.parse(cloudData.zoneInspectionLogs);
+                            const cloudLogs = [...JSON.parse(cloudData.zoneInspectionLogs), ...extraCloudLogs];
                             zoneInspectionLogs = mergeArraysByKey(
                                 zoneInspectionLogs,
                                 cloudLogs,
@@ -1718,16 +1798,19 @@
                             );
                         }
                         if (cloudData.uaucData) {
-                            const cloudUauc = JSON.parse(cloudData.uaucData);
-                            uaucData = mergeArraysByKey(
-                                uaucData,
-                                cloudUauc,
-                                u => u.id || `${u.date}_${u.zone}_${u.observation}`,
+                            const cloudUauc = [...JSON.parse(cloudData.uaucData), ...extraCloudUauc];
+                            uaucData = filterAndDedupeUaucList(
+                                mergeArraysByKey(
+                                    uaucData,
+                                    cloudUauc,
+                                    u => u.id || `${u.date}_${u.zone}_${u.observation}`,
+                                    deletedKeysSet
+                                ),
                                 deletedKeysSet
                             );
                         }
                         if (cloudData.carParData) {
-                            const cloudCars = JSON.parse(cloudData.carParData);
+                            const cloudCars = [...JSON.parse(cloudData.carParData), ...extraCloudCars];
                             carParData = mergeArraysByKey(
                                 carParData,
                                 cloudCars,
@@ -1736,7 +1819,7 @@
                             );
                         }
                         if (cloudData.accidentData) {
-                            const cloudAcc = JSON.parse(cloudData.accidentData);
+                            const cloudAcc = [...JSON.parse(cloudData.accidentData), ...extraCloudAcc];
                             accidentData = mergeArraysByKey(
                                 accidentData,
                                 cloudAcc,
@@ -1769,68 +1852,129 @@
                     console.warn("Merge pre-fetch skipped, proceeding with direct save:", mergeErr);
                 }
 
-                // Sort zoneInspectionLogs and uaucData newest first
+                // Re-compress any merged photos from cloud that might have been uncompressed
+                await ensureAllPhotosCompressed();
+
+                // Sort newest first
                 zoneInspectionLogs.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
                 uaucData.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 
-                // 2. Build payload and guard against Firestore's 1,048,576 byte (1 MB) per-document limit
+                // 2. Partition records so master AND every overflow chunk is strictly < 600,000 bytes (well below 1,048,576 bytes)
+                const SAFE_DOC_LIMIT = 600000;
                 let primaryLogs = [...zoneInspectionLogs];
-                let overflowLogs = [];
                 let primaryUauc = [...uaucData];
-                let overflowUauc = [];
-                let hasOverflowLogs = false;
+                let primaryCars = [...carParData];
+                let primaryAcc = [...accidentData];
 
-                const buildMasterPayload = (zLogs, uList) => ({
+                let overflowLogs = [];
+                let overflowUauc = [];
+                let overflowCars = [];
+                let overflowAcc = [];
+
+                const buildMasterPayload = (zLogs, uList, cList, aList, chunkCount) => ({
                     updatedAt: new Date().toISOString(),
                     updatedBy: currentUserUid,
-                    hasOverflowLogs,
+                    hasOverflowLogs: chunkCount > 0,
+                    overflowChunkCount: chunkCount,
+                    deletedRecordKeys: JSON.stringify(Array.from(new Set(deletedRecordKeys)).slice(0, 500)),
                     zones: JSON.stringify(ZONES_DATA),
                     fireExtinguishers: JSON.stringify(fireExtinguishers),
                     firePumps: JSON.stringify(firePumps),
-                    carParData: JSON.stringify(carParData),
+                    carParData: JSON.stringify(cList),
                     uaucData: JSON.stringify(uList),
-                    accidentData: JSON.stringify(accidentData),
+                    accidentData: JSON.stringify(aList),
                     zoneInspectionLogs: JSON.stringify(zLogs),
                     personnelData: JSON.stringify(personnelData),
                     securityConfig: JSON.stringify(securityConfig),
                     recycleBinData: JSON.stringify(recycleBinData)
                 });
 
-                let payload = buildMasterPayload(primaryLogs, primaryUauc);
+                let payload = buildMasterPayload(primaryLogs, primaryUauc, primaryCars, primaryAcc, 0);
                 let estimatedSize = new Blob([JSON.stringify(payload)]).size;
 
-                // If payload is over 750 KB, move older logs/UAUC with heavy photos to overflow document
-                if (estimatedSize > 750000) {
-                    hasOverflowLogs = true;
-                    while (estimatedSize > 750000 && primaryLogs.length > 4) {
-                        overflowLogs.push(primaryLogs.pop());
-                        payload = buildMasterPayload(primaryLogs, primaryUauc);
-                        estimatedSize = new Blob([JSON.stringify(payload)]).size;
-                    }
-                    while (estimatedSize > 750000 && primaryUauc.length > 4) {
-                        overflowUauc.push(primaryUauc.pop());
-                        payload = buildMasterPayload(primaryLogs, primaryUauc);
-                        estimatedSize = new Blob([JSON.stringify(payload)]).size;
-                    }
-                    if (estimatedSize > 850000) {
-                        recycleBinData = recycleBinData.slice(0, 5);
-                        payload = buildMasterPayload(primaryLogs, primaryUauc);
-                    }
+                if (estimatedSize > SAFE_DOC_LIMIT) {
+                    recycleBinData = recycleBinData.slice(0, 5);
+                    payload = buildMasterPayload(primaryLogs, primaryUauc, primaryCars, primaryAcc, 0);
+                    estimatedSize = new Blob([JSON.stringify(payload)]).size;
                 }
 
+                // Pop items from primary arrays into overflow arrays (down to 0 if needed so master NEVER exceeds 600KB)
+                while (estimatedSize > SAFE_DOC_LIMIT && primaryLogs.length > 0) {
+                    overflowLogs.push(primaryLogs.pop());
+                    payload = buildMasterPayload(primaryLogs, primaryUauc, primaryCars, primaryAcc, 1);
+                    estimatedSize = new Blob([JSON.stringify(payload)]).size;
+                }
+                while (estimatedSize > SAFE_DOC_LIMIT && primaryUauc.length > 0) {
+                    overflowUauc.push(primaryUauc.pop());
+                    payload = buildMasterPayload(primaryLogs, primaryUauc, primaryCars, primaryAcc, 1);
+                    estimatedSize = new Blob([JSON.stringify(payload)]).size;
+                }
+                while (estimatedSize > SAFE_DOC_LIMIT && primaryCars.length > 0) {
+                    overflowCars.push(primaryCars.pop());
+                    payload = buildMasterPayload(primaryLogs, primaryUauc, primaryCars, primaryAcc, 1);
+                    estimatedSize = new Blob([JSON.stringify(payload)]).size;
+                }
+                while (estimatedSize > SAFE_DOC_LIMIT && primaryAcc.length > 0) {
+                    overflowAcc.push(primaryAcc.pop());
+                    payload = buildMasterPayload(primaryLogs, primaryUauc, primaryCars, primaryAcc, 1);
+                    estimatedSize = new Blob([JSON.stringify(payload)]).size;
+                }
+
+                // Pack overflow items into < 600KB chunk documents
+                const overflowChunks = [];
+                const allOverflowQueues = {
+                    zoneInspectionLogs: overflowLogs,
+                    uaucData: overflowUauc,
+                    carParData: overflowCars,
+                    accidentData: overflowAcc
+                };
+
+                const hasAnyOverflow = () =>
+                    allOverflowQueues.zoneInspectionLogs.length > 0 ||
+                    allOverflowQueues.uaucData.length > 0 ||
+                    allOverflowQueues.carParData.length > 0 ||
+                    allOverflowQueues.accidentData.length > 0;
+
+                while (hasAnyOverflow() && overflowChunks.length < 12) {
+                    const chunk = { zoneInspectionLogs: [], uaucData: [], carParData: [], accidentData: [] };
+                    for (const key of ['zoneInspectionLogs', 'uaucData', 'carParData', 'accidentData']) {
+                        while (allOverflowQueues[key].length > 0) {
+                            const nextItem = allOverflowQueues[key][0];
+                            chunk[key].push(nextItem);
+                            const testDoc = {
+                                updatedAt: new Date().toISOString(),
+                                zoneInspectionLogs: JSON.stringify(chunk.zoneInspectionLogs),
+                                uaucData: JSON.stringify(chunk.uaucData),
+                                carParData: JSON.stringify(chunk.carParData),
+                                accidentData: JSON.stringify(chunk.accidentData)
+                            };
+                            const chunkBytes = new Blob([JSON.stringify(testDoc)]).size;
+                            if (chunkBytes > SAFE_DOC_LIMIT && (chunk.zoneInspectionLogs.length + chunk.uaucData.length + chunk.carParData.length + chunk.accidentData.length) > 1) {
+                                chunk[key].pop();
+                                break;
+                            } else {
+                                allOverflowQueues[key].shift();
+                                if (chunkBytes > SAFE_DOC_LIMIT) break;
+                            }
+                        }
+                    }
+                    overflowChunks.push({
+                        updatedAt: new Date().toISOString(),
+                        zoneInspectionLogs: JSON.stringify(chunk.zoneInspectionLogs),
+                        uaucData: JSON.stringify(chunk.uaucData),
+                        carParData: JSON.stringify(chunk.carParData),
+                        accidentData: JSON.stringify(chunk.accidentData)
+                    });
+                }
+
+                // Write overflow chunks first so when master triggers onSnapshot, all chunks are ready
+                for (let cIdx = 0; cIdx < overflowChunks.length; cIdx++) {
+                    const chunkRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', `master_overflow_${cIdx}`);
+                    await setDoc(chunkRef, overflowChunks[cIdx]);
+                }
+
+                payload = buildMasterPayload(primaryLogs, primaryUauc, primaryCars, primaryAcc, overflowChunks.length);
                 await setDoc(stateDocRef, payload);
-
-                if (hasOverflowLogs && (overflowLogs.length > 0 || overflowUauc.length > 0)) {
-                    try {
-                        await setDoc(overflowDocRef, {
-                            updatedAt: new Date().toISOString(),
-                            overflowZoneLogs: JSON.stringify(overflowLogs.slice(0, 25)),
-                            overflowUauc: JSON.stringify(overflowUauc.slice(0, 25))
-                        });
-                    } catch (ovWriteErr) {
-                        console.warn("Overflow write warning:", ovWriteErr);
-                    }
-                }
 
                 // Clear unsynced queue now that cloud write succeeded
                 localStorage.removeItem('klsm_unsynced_submissions');
@@ -3711,6 +3855,9 @@
                     <td class="p-3 text-center">${renderPhotoBadge(item, refStr)}</td>
                     <td class="p-3 text-center"><span class="px-2.5 py-1 ${badgeClass} text-xs font-semibold rounded-full whitespace-nowrap">${statusLabel}</span></td>
                     <td class="p-3 text-right whitespace-nowrap space-x-1">
+                        <button onclick="printCarParReport(${index})" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold" title="Print CAR/PAR Report">
+                            <i class="fa-solid fa-print"></i> Print
+                        </button>
                         <button onclick="openCarParModal(${index})" class="px-2 py-1 bg-slate-100 hover:bg-brand-50 text-brand-600 rounded-lg text-xs font-semibold">
                             <i class="fa-solid fa-pen-to-square"></i> Edit
                         </button>
@@ -3723,191 +3870,185 @@
             });
         }
 
-        function renderLoginPendingCarPar() {
-            const listEl = document.getElementById('loginPendingCarParList');
-            const totalBadge = document.getElementById('loginPendingCountBadge');
-            const openCountEl = document.getElementById('loginCarOpenCount');
-            const progressCountEl = document.getElementById('loginCarProgressCount');
-            if (!listEl) return;
+        function printCarParReport(index) {
+            const item = carParData[index];
+            if (!item) return;
 
-            const pendingItems = carParData.filter(item => item.status !== 'CLOSED');
-            const openCount = pendingItems.filter(item => item.status === 'OPEN').length;
-            const progressCount = pendingItems.filter(item => item.status === 'IN_PROGRESS').length;
-
-            if (totalBadge) totalBadge.textContent = `${pendingItems.length} Pending`;
-            if (openCountEl) openCountEl.textContent = openCount;
-            if (progressCountEl) progressCountEl.textContent = progressCount;
-
-            listEl.innerHTML = '';
-
-            if (pendingItems.length === 0) {
-                listEl.innerHTML = `
-                    <div class="p-6 text-center bg-emerald-50/70 border border-emerald-200 rounded-xl">
-                        <i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-2"></i>
-                        <p class="text-sm font-bold text-emerald-900">All CAR / PAR Items Closed</p>
-                        <p class="text-xs text-emerald-600 mt-0.5">No pending corrective or preventive actions at this time.</p>
-                    </div>
-                `;
-                return;
+            const refStr = String(item.ref || '-');
+            const isPar = refStr.toUpperCase().startsWith('PAR') || item.type === 'PAR';
+            const docTypeTitle = isPar ? 'PREVENTIVE ACTION REQUEST (PAR)' : 'CORRECTIVE ACTION REQUEST (CAR)';
+            let statusLabel = 'OPEN';
+            let statusColor = '#b45309';
+            let statusBg = '#fef3c7';
+            if (item.status === 'CLOSED') {
+                statusLabel = 'CLOSED';
+                statusColor = '#065f46';
+                statusBg = '#d1fae5';
+            } else if (item.status === 'IN_PROGRESS') {
+                statusLabel = 'IN PROGRESS';
+                statusColor = '#1e40af';
+                statusBg = '#dbeafe';
             }
 
-            pendingItems.forEach((item) => {
-                const refStr = String(item.ref || '');
-                const isPar = refStr.toUpperCase().startsWith('PAR') || item.type === 'PAR';
-                const statusBadge = item.status === 'OPEN'
-                    ? `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[11px] font-semibold rounded-full">OPEN</span>`
-                    : `<span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-semibold rounded-full">IN PROGRESS</span>`;
-
-                const detailText = item.detail || item.finding || '-';
-                const issuedByText = item.issuedBy || '-';
-                const receivedByText = item.receivedBy || item.pic || '-';
-                const dateIssuedText = item.dateIssued || item.target || '-';
-
-                const card = document.createElement('div');
-                card.className = "p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition space-y-1.5";
-                card.innerHTML = `
-                    <div class="flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold text-slate-900 text-xs">${refStr}</span>
-                            <span class="px-1.5 py-0.5 ${!isPar ? 'bg-rose-100 text-rose-800' : 'bg-indigo-100 text-indigo-800'} text-[10px] font-bold rounded">${!isPar ? 'CAR' : 'PAR'}</span>
+            const photos = normalizeRecordPhotos(item);
+            const photosSectionHtml = photos.length > 0
+                ? `
+                    <div style="margin-top: 18px; page-break-inside: avoid;">
+                        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #334155; background: #f1f5f9; padding: 6px 10px; border: 1px solid #cbd5e1; border-bottom: none;">
+                            3. Attached Photo Evidence (${photos.length})
                         </div>
-                        ${statusBadge}
+                        <div style="border: 1px solid #cbd5e1; padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                            ${photos.map((p, i) => `
+                                <div style="border: 1px solid #e2e8f0; padding: 6px; border-radius: 6px; text-align: center;">
+                                    <img src="${p.dataUrl || photoPreviewCache[p.name] || ''}" style="max-height: 210px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto 4px;" alt="${p.name || 'Evidence'}">
+                                    <div style="font-size: 10px; color: #64748b;">Photo ${i + 1}: ${p.name || ''}</div>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
-                    <p class="text-xs font-medium text-slate-800">${detailText}</p>
-                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1.5 text-[11px] text-slate-500 border-t border-slate-200/70">
-                        <span><i class="fa-solid fa-user-pen text-slate-400 mr-1"></i>Issued by: <strong>${issuedByText}</strong> (${dateIssuedText})</span>
-                        <span><i class="fa-solid fa-user-check text-slate-400 mr-1"></i>Received by: <strong>${receivedByText}</strong></span>
-                    </div>
-                `;
-                listEl.appendChild(card);
-            });
+                `
+                : '';
+
+            const printHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CAR/PAR Report - ${refStr}</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; margin: 0; padding: 24px; background: #fff; }
+        .print-container { max-width: 800px; margin: 0 auto; border: 2px solid #0f172a; padding: 24px; }
+        .no-print-bar { max-width: 800px; margin: 0 auto 16px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 16px; border: 1px solid #cbd5e1; border-radius: 8px; }
+        .btn-print { background: #0265d2; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; }
+        .btn-close { background: #e2e8f0; color: #334155; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; }
+        table.meta-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
+        table.meta-table th, table.meta-table td { border: 1px solid #cbd5e1; padding: 8px 10px; text-align: left; }
+        table.meta-table th { background: #f8fafc; width: 22%; font-weight: 700; color: #334155; }
+        .section-header { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #334155; background: #f1f5f9; padding: 6px 10px; border: 1px solid #cbd5e1; border-bottom: none; margin-top: 18px; }
+        .section-box { border: 1px solid #cbd5e1; padding: 12px; min-height: 75px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+        .sig-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 24px; page-break-inside: avoid; }
+        .sig-box { border: 1px solid #cbd5e1; padding: 10px; height: 95px; display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; }
+        @media print {
+            .no-print-bar { display: none !important; }
+            body { padding: 0; }
+            .print-container { border: 1.5px solid #000; }
         }
-
-        function openCarParModal(editIndex = null) {
-            const isEdit = editIndex !== null && carParData[editIndex];
-            const today = new Date().toISOString().split('T')[0];
-            const existing = isEdit ? carParData[editIndex] : null;
-            const item = isEdit ? {
-                ref: existing.ref || `CAR-2026-0${Math.floor(Math.random() * 90 + 10)}`,
-                dateIssued: existing.dateIssued || today,
-                issuedBy: existing.issuedBy || currentUser.name,
-                receivedBy: existing.receivedBy || existing.pic || "",
-                dateReceived: existing.dateReceived || existing.target || today,
-                dateClosed: existing.dateClosed || "",
-                status: existing.status || "OPEN",
-                detail: existing.detail || existing.finding || "",
-                actionTaken: existing.actionTaken || "",
-                photos: existing.photos || []
-            } : {
-                ref: `CAR-2026-0${Math.floor(Math.random() * 90 + 10)}`,
-                dateIssued: today,
-                issuedBy: currentUser.name,
-                receivedBy: "",
-                dateReceived: today,
-                dateClosed: "",
-                status: "OPEN",
-                detail: "",
-                actionTaken: "",
-                photos: []
-            };
-            initPendingPhotosFromItem(item);
-
-            openModal(`
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? `Edit CAR/PAR (${item.ref})` : 'New CAR/PAR Issue'}</h3>
-                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </style>
+</head>
+<body>
+    <div class="no-print-bar">
+        <span style="font-size: 13px; font-weight: 600; color: #334155;">KLSM Official CAR/PAR Print Preview (${refStr})</span>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn-print" onclick="window.print()">Print / Save as PDF</button>
+            <button class="btn-close" onclick="window.close()">Close Window</button>
+        </div>
+    </div>
+    <div class="print-container">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 14px;">
+            <div>
+                <div style="font-size: 18px; font-weight: 800; letter-spacing: 0.3px;">KIM LOONG SABAH MILLS SDN BHD</div>
+                <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 2px;">Health, Safety, Security & Environment (HSSE) Department</div>
+                <div style="font-size: 14px; font-weight: 700; color: #0265d2; margin-top: 6px;">${docTypeTitle}</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 11px; color: #64748b; font-weight: 600;">REF NO.</div>
+                <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${refStr}</div>
+                <div style="margin-top: 6px; display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; background: ${statusBg}; color: ${statusColor};">
+                    STATUS: ${statusLabel}
                 </div>
-                <form onsubmit="saveCarPar(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">1. CAR/PAR Reference No.</label>
-                            <input type="text" id="carRef" required value="${item.ref}" placeholder="e.g. CAR-2026-001 or PAR-2026-001" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">2. Date Issued</label>
-                            <input type="date" id="carDateIssued" required value="${item.dateIssued}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">3. Issued By</label>
-                            <input type="text" id="carIssuedBy" required value="${item.issuedBy}" placeholder="Name of issuer" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">4. Received By</label>
-                            <input type="text" id="carReceivedBy" required value="${item.receivedBy}" placeholder="Name of recipient / PIC" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">5. Date Received</label>
-                            <input type="date" id="carDateReceived" required value="${item.dateReceived}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">6. Status</label>
-                            <select id="carStatus" onchange="if(this.value==='CLOSED' && !document.getElementById('carDateClosed').value){document.getElementById('carDateClosed').value='${today}';}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                                <option value="OPEN" ${item.status === 'OPEN' ? 'selected' : ''}>Open</option>
-                                <option value="IN_PROGRESS" ${item.status === 'IN_PROGRESS' ? 'selected' : ''}>In Progress</option>
-                                <option value="CLOSED" ${item.status === 'CLOSED' ? 'selected' : ''}>Closed</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">7. Date Closed</label>
-                            <input type="date" id="carDateClosed" value="${item.dateClosed}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">8. CAR/PAR Detail</label>
-                        <textarea id="carDetail" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2" placeholder="Describe the CAR/PAR non-conformance or preventive issue...">${item.detail}</textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">9. Action Taken</label>
-                        <textarea id="carActionTaken" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2" placeholder="Describe the corrective or preventive action taken...">${item.actionTaken}</textarea>
-                    </div>
-                    ${getPhotoInputHtml()}
-                    <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm">
-                        ${isEdit ? 'Save Changes' : 'Register CAR/PAR'}
-                    </button>
-                </form>
-            `);
-            renderModalPhotoPreviews();
-        }
+            </div>
+        </div>
 
-        async function saveCarPar(e, editIndex) {
-            e.preventDefault();
-            if (pendingPhotoProcessingCount > 0) {
-                showToast("Please wait a moment for your photo to finish processing...");
-                return;
-            }
-            const isEdit = editIndex !== null && editIndex !== undefined;
-            const refVal = document.getElementById('carRef').value.trim();
-            const derivedType = refVal.toUpperCase().startsWith('PAR') ? 'PAR' : 'CAR';
+        <table class="meta-table">
+            <tr>
+                <th>CAR/PAR Ref No.</th>
+                <td><strong>${refStr}</strong> (${isPar ? 'PAR' : 'CAR'})</td>
+                <th>Date Issued</th>
+                <td>${item.dateIssued || '-'}</td>
+            </tr>
+            <tr>
+                <th>Issued By</th>
+                <td>${item.issuedBy || '-'}</td>
+                <th>Received By (PIC)</th>
+                <td>${item.receivedBy || item.pic || '-'}</td>
+            </tr>
+            <tr>
+                <th>Date Received</th>
+                <td>${item.dateReceived || item.target || '-'}</td>
+                <th>Date Closed</th>
+                <td>${item.dateClosed || '-'}</td>
+            </tr>
+        </table>
 
-            const record = {
-                ref: refVal,
-                type: derivedType,
-                dateIssued: document.getElementById('carDateIssued').value,
-                issuedBy: document.getElementById('carIssuedBy').value.trim(),
-                receivedBy: document.getElementById('carReceivedBy').value.trim(),
-                dateReceived: document.getElementById('carDateReceived').value,
-                dateClosed: document.getElementById('carDateClosed').value || "",
-                status: document.getElementById('carStatus').value,
-                detail: document.getElementById('carDetail').value.trim(),
-                actionTaken: document.getElementById('carActionTaken').value.trim(),
-                photos: [...pendingPhotos],
-                updatedAt: Date.now()
-            };
+        <div class="section-header">1. Non-Conformance / CAR / PAR Detail</div>
+        <div class="section-box">${item.detail || item.finding || '-'}</div>
 
-            pendingPhotos = [];
-            if (isEdit) {
-                carParData[editIndex] = record;
+        <div class="section-header">2. Corrective / Preventive Action Taken</div>
+        <div class="section-box">${item.actionTaken || 'Pending action update.'}</div>
+
+        ${photosSectionHtml}
+
+        <div class="sig-grid">
+            <div class="sig-box">
+                <div style="font-weight: 700; color: #334155;">ISSUED BY:</div>
+                <div>
+                    <div style="border-top: 1px solid #94a3b8; padding-top: 4px; font-weight: 600;">${item.issuedBy || '____________________'}</div>
+                    <div style="color: #64748b; font-size: 10px;">Date: ${item.dateIssued || '____/____/2026'}</div>
+                </div>
+            </div>
+            <div class="sig-box">
+                <div style="font-weight: 700; color: #334155;">RECEIVED & ACTION BY (PIC):</div>
+                <div>
+                    <div style="border-top: 1px solid #94a3b8; padding-top: 4px; font-weight: 600;">${item.receivedBy || item.pic || '____________________'}</div>
+                    <div style="color: #64748b; font-size: 10px;">Date: ${item.dateReceived || '____/____/2026'}</div>
+                </div>
+            </div>
+            <div class="sig-box">
+                <div style="font-weight: 700; color: #334155;">VERIFIED & CLOSED BY (HSE):</div>
+                <div>
+                    <div style="border-top: 1px solid #94a3b8; padding-top: 4px; font-weight: 600;">____________________</div>
+                    <div style="color: #64748b; font-size: 10px;">Date: ${item.dateClosed || '____/____/2026'}</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 18px; font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between;">
+            <span>Generated from KLSM Inspection Hub</span>
+            <span>Printed on: ${new Date().toLocaleString('en-MY')}</span>
+        </div>
+    </div>
+    <script>
+        window.onload = function() { setTimeout(function() { window.print(); }, 250); };
+    <\/script>
+</body>
+</html>`;
+
+            const printWin = window.open('', '_blank', 'width=900,height=800');
+            if (printWin) {
+                printWin.document.open();
+                printWin.document.write(printHtml);
+                printWin.document.close();
             } else {
-                carParData.unshift(record);
-            }
-            closeModal();
-            const synced = await saveAllData();
-            if (synced) {
-                showToast(isEdit ? "CAR/PAR record updated in Cloud!" : "CAR/PAR registered in Cloud!");
+                // Fallback if mobile browser blocks popups: use an invisible print iframe
+                let iframe = document.getElementById('carParPrintIframe');
+                if (!iframe) {
+                    iframe = document.createElement('iframe');
+                    iframe.id = 'carParPrintIframe';
+                    iframe.style.position = 'fixed';
+                    iframe.style.right = '0';
+                    iframe.style.bottom = '0';
+                    iframe.style.width = '0';
+                    iframe.style.height = '0';
+                    iframe.style.border = '0';
+                    document.body.appendChild(iframe);
+                }
+                const doc = iframe.contentWindow.document;
+                doc.open();
+                doc.write(printHtml);
+                doc.close();
+                setTimeout(() => {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                }, 300);
             }
         }
 
@@ -4029,17 +4170,20 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                            <select id="uaucStatus" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
-                                <option ${item.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                                <option ${item.status === 'Closed' ? 'selected' : ''}>Closed</option>
-                            </select>
-                        </div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">9. Action Taken</label>
+                        <textarea id="carActionTaken" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2" placeholder="Describe the corrective or preventive action taken...">${item.actionTaken}</textarea>
                     </div>
                     ${getPhotoInputHtml()}
-                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm">
-                        ${isEdit ? 'Update Report' : 'Submit Report'}
-                    </button>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        ${isEdit ? `
+                            <button type="button" onclick="printCarParReport(${editIndex})" class="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> Print Report
+                            </button>
+                        ` : ''}
+                        <button type="submit" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm">
+                            ${isEdit ? 'Save Changes' : 'Register CAR/PAR'}
+                        </button>
+                    </div>
                 </form>
             `);
             renderModalPhotoPreviews();
@@ -5276,6 +5420,7 @@
             saveFirePump,
             deleteFirePump,
             renderCarParTable,
+            printCarParReport,
             openCarParModal,
             saveCarPar,
             deleteCarPar,
