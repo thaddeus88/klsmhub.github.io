@@ -1508,6 +1508,101 @@
                 console.warn("Could not load local state backup:", e);
             }
         }
+
+        function sanitizeRecycleBinForCloud(binList) {
+            if (!Array.isArray(binList)) return [];
+            return binList.slice(0, 20).map(entry => {
+                const copy = { ...entry };
+                if (copy.payload && typeof copy.payload === 'object') {
+                    copy.payload = { ...copy.payload };
+                    if (Array.isArray(copy.payload.photos)) {
+                        copy.payload.photos = [];
+                    }
+                }
+                return copy;
+            });
+        }
+
+        // --- CLOUD FIRESTORE INITIALIZATION (MULTI-USER) ---
+        async function initCloudSync(overrideConfig = null) {
+            if (cloudInitPromise && !overrideConfig) return cloudInitPromise;
+
+            cloudInitPromise = (async () => {
+                try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const encodedUrlCfg = urlParams.get('fb_cfg');
+                    if (encodedUrlCfg && !overrideConfig) {
+                        try {
+                            const decodedCfg = JSON.parse(atob(encodedUrlCfg));
+                            if (decodedCfg && decodedCfg.apiKey && decodedCfg.projectId) {
+                                localStorage.setItem('klsm_firebase_config', JSON.stringify(decodedCfg));
+                                window.__custom_firebase_config = decodedCfg;
+                                overrideConfig = decodedCfg;
+                            }
+                        } catch (e) {
+                            console.warn("Invalid URL Firebase config parameter:", e);
+                        }
+                    }
+
+                    let rawConfig = overrideConfig;
+                    if (!rawConfig && typeof __firebase_config !== 'undefined' && __firebase_config) {
+                        rawConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
+                    }
+                    if (!rawConfig && window.__custom_firebase_config) {
+                        rawConfig = window.__custom_firebase_config;
+                    }
+                    if (!rawConfig) {
+                        const savedLocalConfig = localStorage.getItem('klsm_firebase_config');
+                        if (savedLocalConfig) {
+                            try { rawConfig = JSON.parse(savedLocalConfig); } catch (e) {}
+                        }
+                    }
+                    if (!rawConfig && (DEFAULT_KLSM_FIREBASE_CONFIG.apiKey || DEFAULT_KLSM_FIREBASE_CONFIG.apiKeyB64) && DEFAULT_KLSM_FIREBASE_CONFIG.projectId) {
+                        const resolvedKey = DEFAULT_KLSM_FIREBASE_CONFIG.apiKey || atob(DEFAULT_KLSM_FIREBASE_CONFIG.apiKeyB64);
+                        rawConfig = {
+                            ...DEFAULT_KLSM_FIREBASE_CONFIG,
+                            apiKey: resolvedKey
+                        };
+                    }
+
+                    if (!rawConfig || !rawConfig.apiKey || !rawConfig.projectId) {
+                        currentUserUid = "local-" + crypto.randomUUID().substring(0, 8);
+                        document.getElementById('cloudStatusText').textContent = "Setup Cloud Link";
+                        const dot = document.getElementById('cloudStatusDot');
+                        if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
+                        document.getElementById('navUserId').textContent = `UID: ${currentUserUid}`;
+                        return;
+                    }
+
+                    customFirebaseConfig = rawConfig;
+                    const app = initializeApp(rawConfig, "klsmApp_" + Date.now());
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token && !overrideConfig) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                        currentUserUid = auth.currentUser?.uid || ("user-" + crypto.randomUUID().substring(0, 8));
+                    } catch (authErr) {
+                        console.warn("Firebase Auth fallback (using direct Firestore mode):", authErr);
+                        currentUserUid = "anon-" + crypto.randomUUID().substring(0, 8);
+                    }
+
+                    document.getElementById('navUserId').textContent = `UID: ${currentUserUid}`;
+                    document.getElementById('cloudStatusText').textContent = "Live Cloud Sync";
+                    const dot = document.getElementById('cloudStatusDot');
+                    if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+
+                    onAuthStateChanged(auth, (user) => {
+                        if (user && user.uid) {
+                            currentUserUid = user.uid;
+                            document.getElementById('navUserId').textContent = `UID: ${currentUserUid}`;
+                        }
+                    });
+
                     // Attach real-time listener to master document and overflow logs documents
                     const stateDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master');
                     const overflowDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'klsm_shared_state', 'master_logs_overflow');
@@ -3870,6 +3965,66 @@
             });
         }
 
+        function renderLoginPendingCarPar() {
+            const listEl = document.getElementById('loginPendingCarParList');
+            const totalBadge = document.getElementById('loginPendingCountBadge');
+            const openCountEl = document.getElementById('loginCarOpenCount');
+            const progressCountEl = document.getElementById('loginCarProgressCount');
+            if (!listEl) return;
+
+            const pendingItems = carParData.filter(item => item.status !== 'CLOSED');
+            const openCount = pendingItems.filter(item => item.status === 'OPEN').length;
+            const progressCount = pendingItems.filter(item => item.status === 'IN_PROGRESS').length;
+
+            if (totalBadge) totalBadge.textContent = `${pendingItems.length} Pending`;
+            if (openCountEl) openCountEl.textContent = openCount;
+            if (progressCountEl) progressCountEl.textContent = progressCount;
+
+            listEl.innerHTML = '';
+
+            if (pendingItems.length === 0) {
+                listEl.innerHTML = `
+                    <div class="p-6 text-center bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                        <i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-2"></i>
+                        <p class="text-sm font-bold text-emerald-900">All CAR / PAR Items Closed</p>
+                        <p class="text-xs text-emerald-600 mt-0.5">No pending corrective or preventive actions at this time.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            pendingItems.forEach((item) => {
+                const refStr = String(item.ref || '');
+                const isPar = refStr.toUpperCase().startsWith('PAR') || item.type === 'PAR';
+                const statusBadge = item.status === 'OPEN'
+                    ? `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[11px] font-semibold rounded-full">OPEN</span>`
+                    : `<span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-[11px] font-semibold rounded-full">IN PROGRESS</span>`;
+
+                const detailText = item.detail || item.finding || '-';
+                const issuedByText = item.issuedBy || '-';
+                const receivedByText = item.receivedBy || item.pic || '-';
+                const dateIssuedText = item.dateIssued || item.target || '-';
+
+                const card = document.createElement('div');
+                card.className = "p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition space-y-1.5";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-900 text-xs">${refStr}</span>
+                            <span class="px-1.5 py-0.5 ${!isPar ? 'bg-rose-100 text-rose-800' : 'bg-indigo-100 text-indigo-800'} text-[10px] font-bold rounded">${!isPar ? 'CAR' : 'PAR'}</span>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <p class="text-xs font-medium text-slate-800">${detailText}</p>
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1.5 text-[11px] text-slate-500 border-t border-slate-200/70">
+                        <span><i class="fa-solid fa-user-pen text-slate-400 mr-1"></i>Issued by: <strong>${issuedByText}</strong> (${dateIssuedText})</span>
+                        <span><i class="fa-solid fa-user-check text-slate-400 mr-1"></i>Received by: <strong>${receivedByText}</strong></span>
+                    </div>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+
         function printCarParReport(index) {
             const item = carParData[index];
             if (!item) return;
@@ -4052,6 +4207,141 @@
             }
         }
 
+        function openCarParModal(editIndex = null) {
+            const isEdit = editIndex !== null && carParData[editIndex];
+            const today = new Date().toISOString().split('T')[0];
+            const existing = isEdit ? carParData[editIndex] : null;
+            const item = isEdit ? {
+                ref: existing.ref || `CAR-2026-0${Math.floor(Math.random() * 90 + 10)}`,
+                dateIssued: existing.dateIssued || today,
+                issuedBy: existing.issuedBy || currentUser.name,
+                receivedBy: existing.receivedBy || existing.pic || "",
+                dateReceived: existing.dateReceived || existing.target || today,
+                dateClosed: existing.dateClosed || "",
+                status: existing.status || "OPEN",
+                detail: existing.detail || existing.finding || "",
+                actionTaken: existing.actionTaken || "",
+                photos: existing.photos || []
+            } : {
+                ref: `CAR-2026-0${Math.floor(Math.random() * 90 + 10)}`,
+                dateIssued: today,
+                issuedBy: currentUser.name,
+                receivedBy: "",
+                dateReceived: today,
+                dateClosed: "",
+                status: "OPEN",
+                detail: "",
+                actionTaken: "",
+                photos: []
+            };
+            initPendingPhotosFromItem(item);
+
+            openModal(`
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-900">${isEdit ? `Edit CAR/PAR (${item.ref})` : 'New CAR/PAR Issue'}</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form onsubmit="saveCarPar(event, ${isEdit ? editIndex : 'null'})" class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">1. CAR/PAR Reference No.</label>
+                            <input type="text" id="carRef" required value="${item.ref}" placeholder="e.g. CAR-2026-001 or PAR-2026-001" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">2. Date Issued</label>
+                            <input type="date" id="carDateIssued" required value="${item.dateIssued}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">3. Issued By</label>
+                            <input type="text" id="carIssuedBy" required value="${item.issuedBy}" placeholder="Name of issuer" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">4. Received By</label>
+                            <input type="text" id="carReceivedBy" required value="${item.receivedBy}" placeholder="Name of recipient / PIC" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">5. Date Received</label>
+                            <input type="date" id="carDateReceived" required value="${item.dateReceived}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">6. Status</label>
+                            <select id="carStatus" onchange="if(this.value==='CLOSED' && !document.getElementById('carDateClosed').value){document.getElementById('carDateClosed').value='${today}';}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                                <option value="OPEN" ${item.status === 'OPEN' ? 'selected' : ''}>Open</option>
+                                <option value="IN_PROGRESS" ${item.status === 'IN_PROGRESS' ? 'selected' : ''}>In Progress</option>
+                                <option value="CLOSED" ${item.status === 'CLOSED' ? 'selected' : ''}>Closed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">7. Date Closed</label>
+                            <input type="date" id="carDateClosed" value="${item.dateClosed}" class="w-full p-2 border border-slate-300 rounded-xl text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">8. CAR/PAR Detail</label>
+                        <textarea id="carDetail" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2" placeholder="Describe the CAR/PAR non-conformance or preventive issue...">${item.detail}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">9. Action Taken</label>
+                        <textarea id="carActionTaken" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2" placeholder="Describe the corrective or preventive action taken...">${item.actionTaken}</textarea>
+                    </div>
+                    ${getPhotoInputHtml()}
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        ${isEdit ? `
+                            <button type="button" onclick="printCarParReport(${editIndex})" class="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> Print Report
+                            </button>
+                        ` : ''}
+                        <button type="submit" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm">
+                            ${isEdit ? 'Save Changes' : 'Register CAR/PAR'}
+                        </button>
+                    </div>
+                </form>
+            `);
+            renderModalPhotoPreviews();
+        }
+
+        async function saveCarPar(e, editIndex) {
+            e.preventDefault();
+            if (pendingPhotoProcessingCount > 0) {
+                showToast("Please wait a moment for your photo to finish processing...");
+                return;
+            }
+            const isEdit = editIndex !== null && editIndex !== undefined;
+            const refVal = document.getElementById('carRef').value.trim();
+            const derivedType = refVal.toUpperCase().startsWith('PAR') ? 'PAR' : 'CAR';
+
+            const record = {
+                ref: refVal,
+                type: derivedType,
+                dateIssued: document.getElementById('carDateIssued').value,
+                issuedBy: document.getElementById('carIssuedBy').value.trim(),
+                receivedBy: document.getElementById('carReceivedBy').value.trim(),
+                dateReceived: document.getElementById('carDateReceived').value,
+                dateClosed: document.getElementById('carDateClosed').value || "",
+                status: document.getElementById('carStatus').value,
+                detail: document.getElementById('carDetail').value.trim(),
+                actionTaken: document.getElementById('carActionTaken').value.trim(),
+                photos: [...pendingPhotos],
+                updatedAt: Date.now()
+            };
+
+            pendingPhotos = [];
+            if (isEdit) {
+                carParData[editIndex] = record;
+            } else {
+                carParData.unshift(record);
+            }
+            closeModal();
+            const synced = await saveAllData();
+            if (synced) {
+                showToast(isEdit ? "CAR/PAR record updated & synced!" : "CAR/PAR registered & synced to Cloud!");
+            }
+        }
+
         function deleteCarPar(index) {
             const item = carParData[index];
             if (!item) return;
@@ -4170,20 +4460,17 @@
                             </select>
                         </div>
                         <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">9. Action Taken</label>
-                        <textarea id="carActionTaken" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" rows="2" placeholder="Describe the corrective or preventive action taken...">${item.actionTaken}</textarea>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                            <select id="uaucStatus" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                                <option ${item.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                <option ${item.status === 'Closed' ? 'selected' : ''}>Closed</option>
+                            </select>
+                        </div>
                     </div>
                     ${getPhotoInputHtml()}
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        ${isEdit ? `
-                            <button type="button" onclick="printCarParReport(${editIndex})" class="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-1.5">
-                                <i class="fa-solid fa-print"></i> Print Report
-                            </button>
-                        ` : ''}
-                        <button type="submit" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm">
-                            ${isEdit ? 'Save Changes' : 'Register CAR/PAR'}
-                        </button>
-                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm">
+                        ${isEdit ? 'Update Report' : 'Submit Report'}
+                    </button>
                 </form>
             `);
             renderModalPhotoPreviews();
